@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexora — Voice Laptop Program</title>
+<meta name="description" content="Nexora is a small Windows program you control with your voice. Open Word, Chrome and YouTube, search, and dictate — just by speaking. Free test version.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; background: #0b1020; color: #eef1ff; line-height: 1.6; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 18px 60px; }
+  header { text-align: center; padding: 56px 0 28px; }
+  .logo { font-size: 3.4rem; font-weight: 800; letter-spacing: 3px; background: linear-gradient(90deg, #5b8cff, #b06bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mic { font-size: 3rem; }
+  .tagline { font-size: 1.25rem; color: #c6cdf5; margin-top: 10px; }
+  .tagline-ur { color: #8f9ac9; margin-top: 4px; }
+  .badge { display: inline-block; margin-top: 16px; background: #1a2342; border: 1px solid #33427c; color: #a9bcff; padding: 4px 14px; border-radius: 999px; font-size: .9rem; }
+  .download { text-align: center; margin: 34px 0 8px; }
+  .btn { display: inline-block; background: linear-gradient(90deg, #2b5cff, #7a3cff); color: #fff; text-decoration: none; font-size: 1.2rem; font-weight: 700; padding: 16px 42px; border-radius: 12px; box-shadow: 0 8px 28px rgba(60,90,255,.4); }
+  .btn:hover { opacity: .92; }
+  .note { text-align: center; color: #8f9ac9; font-size: .9rem; margin-top: 10px; }
+  section { background: #121935; border: 1px solid #232c52; border-radius: 16px; padding: 26px 24px; margin-top: 28px; }
+  h2 { font-size: 1.4rem; margin-bottom: 14px; color: #dfe6ff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .card { background: #0e1430; border: 1px solid #232c52; border-radius: 12px; padding: 16px; }
+  .card b { display: block; font-size: 1.05rem; margin-bottom: 6px; }
+  .cmd { font-family: Consolas, monospace; background: #0a0e24; border: 1px solid #28336a; border-radius: 8px; padding: 3px 10px; display: inline-block; margin: 3px 2px; color: #9fd0ff; font-size: .95rem; }
+  ol.steps li { margin: 8px 0 8px 20px; }
+  footer { text-align: center; color: #6c77a3; font-size: .9rem; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mic">🎤</div>
+    <div class="logo">NEXORA</div>
+    <p class="tagline">Your laptop, controlled by your voice.</p>
+    <p class="tagline-ur">Speak — and it gets done.</p>
+    <span class="badge">Free Test Version v1 • Windows • Rs 0</span>
+  </header>
+
+  <div class="download">
+    <a class="btn" href="nexora-test-v1.zip" download>⬇ Download Nexora (Windows)</a>
+    <p class="note">This button downloads the <b>real Nexora file</b>.<br>
+    After downloading, unzip the file and double-click <b>run_nexora.bat</b> to start Nexora — this page is only the download page, not the program itself.</p>
+  </div>
+
+  <section>
+    <h2>What can Nexora do?</h2>
+    <div class="grid">
+      <div class="card"><b>📄 Open programs</b>Word, Chrome, Notepad, Calculator, Paint and your files — just by asking.</div>
+      <div class="card"><b>🔎 Search by voice</b>Say what to search and Nexora searches Google or YouTube for you.</div>
+      <div class="card"><b>✍️ Type by speaking</b>Dictate text straight into Word or Notepad — no keyboard needed.</div>
+      <div class="card"><b>🗣️ Speaks back to you</b>Nexora does not just listen — it replies in voice and confirms every action on screen.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Try saying…</h2>
+    <span class="cmd">"open word"</span>
+    <span class="cmd">"open chrome"</span>
+    <span class="cmd">"open youtube"</span>
+    <span class="cmd">"search for cats"</span>
+    <span class="cmd">"youtube search funny videos"</span>
+    <span class="cmd">"type my name is Ahmad"</span>
+    <span class="cmd">"open photos"</span>
+    <span class="cmd">"what is the time"</span>
+    <span class="cmd">"volume up"</span>
+    <span class="cmd">"close this"</span>
+  </section>
+
+  <section>
+    <h2>How to run it</h2>
+    <ol class="steps">
+      <li>Download and unzip Nexora on your Windows laptop.</li>
+      <li>Install Python once from <b>python.org</b> (free) — tick <b>"Add python.exe to PATH"</b> while installing.</li>
+      <li>Double-click <b>run_nexora.bat</b> — the needed libraries install themselves the first time.</li>
+      <li>Press the mic button, allow microphone permission, and speak. No mic? Type the command and press <b>Do It</b>.</li>
+    </ol>
+    <p class="note" style="text-align:left">Honest note: this is a test version. It needs internet for voice recognition, MS Word must be installed for Word to open, and it follows the commands listed above — it does not yet have an AI brain for open conversation.</p>
+  </section>
+
+  <footer>
+    Nexora — Test Version v1 • Made for Ahmad • Free (Rs 0)
+  </footer>
+
+</div>
+</body>
+</html>
