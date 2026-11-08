@@ -3,129 +3,80 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nexora — Voice Laptop Program</title>
+<title data-i18n="title_home">Nexora — Voice Laptop Program</title>
 <link rel="icon" type="image/jpeg" href="logo.jpg">
 <meta name="description" content="Nexora is a small Windows program you control with your voice. Open Word, Chrome and YouTube, search, and dictate — just by speaking. Free test version.">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: "Segoe UI", Arial, sans-serif; background: #0b1020; color: #eef1ff; line-height: 1.6; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 18px 60px; }
-  header { text-align: center; padding: 56px 0 28px; }
-  .logo { font-size: 3.4rem; font-weight: 800; letter-spacing: 3px; background: linear-gradient(90deg, #5b8cff, #b06bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .logo-img { width: 168px; max-width: 62vw; border-radius: 24px; border: 1px solid #28336a; box-shadow: 0 12px 40px rgba(60,90,255,.35); }
-  .tagline { font-size: 1.25rem; color: #c6cdf5; margin-top: 10px; }
-  .tagline-ur { color: #8f9ac9; margin-top: 4px; }
-  .badge { display: inline-block; margin-top: 16px; background: #1a2342; border: 1px solid #33427c; color: #a9bcff; padding: 4px 14px; border-radius: 999px; font-size: .9rem; }
-  .download { text-align: center; margin: 34px 0 8px; }
-  .btn { display: inline-block; background: linear-gradient(90deg, #2b5cff, #7a3cff); color: #fff; text-decoration: none; font-size: 1.2rem; font-weight: 700; padding: 16px 42px; border-radius: 12px; box-shadow: 0 8px 28px rgba(60,90,255,.4); }
-  .btn:hover { opacity: .92; }
-  .note { text-align: center; color: #8f9ac9; font-size: .9rem; margin-top: 10px; }
-  section { background: #121935; border: 1px solid #232c52; border-radius: 16px; padding: 26px 24px; margin-top: 28px; }
-  h2 { font-size: 1.4rem; margin-bottom: 14px; color: #dfe6ff; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-  .card { background: #0e1430; border: 1px solid #232c52; border-radius: 12px; padding: 16px; }
-  .card b { display: block; font-size: 1.05rem; margin-bottom: 6px; }
-  .cmd { font-family: Consolas, monospace; background: #0a0e24; border: 1px solid #28336a; border-radius: 8px; padding: 3px 10px; display: inline-block; margin: 3px 2px; color: #9fd0ff; font-size: .95rem; }
-  ol.steps li { margin: 8px 0 8px 20px; }
-  footer { text-align: center; color: #6c77a3; font-size: .9rem; margin-top: 40px; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<nav class="navbar">
+  <a class="brand" href="index.html"><img src="logo.jpg" alt="Nexora logo"><span>NEXORA</span></a>
+  <div class="nav-links">
+    <a href="index.html" class="active" data-i18n="nav_home">Home</a>
+    <a href="about.html" data-i18n="nav_about">About</a>
+    <a href="help.html" data-i18n="nav_help">Help</a>
+    <select id="lang-select" aria-label="Language">
+      <option value="en">English</option>
+      <option value="ur">اردو</option>
+      <option value="hi">हिन्दी</option>
+      <option value="ar">العربية</option>
+      <option value="es">Español</option>
+      <option value="fr">Français</option>
+      <option value="de">Deutsch</option>
+      <option value="tr">Türkçe</option>
+    </select>
+  </div>
+</nav>
+
 <div class="wrap">
 
-  <header>
-    <img class="logo-img" src="logo.jpg" alt="Nexora AI logo">
-    <div class="logo">NEXORA</div>
-    <p class="tagline">Speak once — Nexora does it.</p>
-    <p class="tagline-ur">Your laptop, controlled by your voice.</p>
-    <span class="badge">Free Test Version v4 — 62 languages • Windows • Rs 0</span>
+  <header class="hero">
+    <img class="logo-img" src="logo.jpg" alt="Nexora logo">
+    <div class="logo-text">NEXORA</div>
+    <p class="tagline" data-i18n="hero_tagline">Speak once — Nexora does it.</p>
+    <p class="tagline-sub" data-i18n="hero_sub">Your laptop, controlled by your voice.</p>
+    <span class="badge" data-i18n="badge">Free Test Version v4 — 62 languages • Windows • Rs 0</span>
   </header>
 
   <div class="download">
-    <a class="btn" href="nexora-test-v4.zip" download>⬇ Download Nexora v4 (Windows)</a>
-    <p class="note">This button downloads the <b>real Nexora file</b>.<br>
-    After downloading, unzip the file and double-click <b>run_nexora.bat</b> to start Nexora — this page is only the download page, not the program itself.</p>
+    <a class="btn" href="https://github.com/inwhychannel-cpu/nexora/releases/latest/download/Nexora.exe" data-i18n="dl_btn">⬇ Download Nexora.exe (Windows)</a>
+    <p class="note" data-i18n="dl_note">One file — no zip, no Python needed. Download, double-click, Nexora opens.</p>
+    <a class="zip-link" href="nexora-test-v4.zip" download data-i18n="dl_zip">Advanced: download the ZIP test version</a>
   </div>
 
   <section>
-    <h2>What can Nexora do?</h2>
+    <h2 data-i18n="does_h">What can Nexora do?</h2>
     <div class="grid">
-      <div class="card"><b>📄 Open programs</b>Word, Chrome, Notepad, Calculator, Paint and your files — just by asking.</div>
-      <div class="card"><b>🔎 Search by voice</b>Say what to search and Nexora searches Google or YouTube for you.</div>
-      <div class="card"><b>✍️ Type by speaking</b>Dictate text straight into Word or Notepad — no keyboard needed.</div>
-      <div class="card"><b>🗣️ Speaks back to you</b>Nexora does not just listen — it replies in voice and confirms every action on screen.</div>
+      <div class="card"><b data-i18n="does1_t">📄 Open programs</b><span data-i18n="does1_p">Word, Chrome, Notepad, Calculator, Paint and your files — just by asking.</span></div>
+      <div class="card"><b data-i18n="does2_t">🔎 Search by voice</b><span data-i18n="does2_p">Say what to search and Nexora searches Google or YouTube for you.</span></div>
+      <div class="card"><b data-i18n="does3_t">✍️ Type by speaking</b><span data-i18n="does3_p">Dictate text straight into Word or Notepad — no keyboard needed.</span></div>
+      <div class="card"><b data-i18n="does4_t">🗣️ Speaks back to you</b><span data-i18n="does4_p">Nexora replies in voice and confirms every action on screen.</span></div>
     </div>
   </section>
 
   <section>
-    <h2>Try saying…</h2>
-    <span class="cmd">"open word"</span>
-    <span class="cmd">"open chrome"</span>
-    <span class="cmd">"open youtube"</span>
-    <span class="cmd">"search for cats"</span>
-    <span class="cmd">"youtube search funny videos"</span>
-    <span class="cmd">"type my name is Ahmad"</span>
-    <span class="cmd">"open photos"</span>
-    <span class="cmd">"what is the time"</span>
-    <span class="cmd">"volume up"</span>
-    <span class="cmd">"close this"</span>
-  </section>
-
-  <section>
-    <h2>How to run it</h2>
-    <ol class="steps">
-      <li>Download and unzip Nexora on your Windows laptop.</li>
-      <li>Install Python once from <b>python.org</b> (free) — tick <b>"Add python.exe to PATH"</b> while installing.</li>
-      <li>Double-click <b>run_nexora.bat</b> — the needed libraries install themselves the first time.</li>
-      <li>Press the mic button, allow microphone permission, and speak. No mic? Type the command and press <b>Do It</b>.</li>
-    </ol>
-    <p class="note" style="text-align:left">Honest note: this is a test version. It needs internet for voice recognition, MS Word must be installed for Word to open, and it follows the commands listed above — it does not yet have an AI brain for open conversation.</p>
-  </section>
-
-  <section>
-    <h2>How Nexora Works</h2>
+    <h2 data-i18n="how_h">How Nexora works</h2>
     <div class="grid">
-      <div class="card"><b>1️⃣ Choose your language</b>Pick your language from the list at the top of the Nexora window — 62 languages to choose from.</div>
-      <div class="card"><b>2️⃣ Click Speak and say a command</b>Press the big 🎤 Speak button and say one simple command. No mic? Just type it instead.</div>
-      <div class="card"><b>3️⃣ Nexora does the work</b>Nexora opens, searches or types for you — and replies in your language, in voice and on screen.</div>
+      <div class="card"><b data-i18n="how1_t">1️⃣ Choose your language</b><span data-i18n="how1_p">Pick your language in the Nexora window — 62 languages to choose from.</span></div>
+      <div class="card"><b data-i18n="how2_t">2️⃣ Click Speak and say a command</b><span data-i18n="how2_p">Press the big 🎤 Speak button and say one simple command — or just type it.</span></div>
+      <div class="card"><b data-i18n="how3_t">3️⃣ Nexora does the work</b><span data-i18n="how3_p">Nexora opens, searches or types for you, and replies in your language.</span></div>
     </div>
   </section>
 
   <section>
-    <h2>Example Commands</h2>
-    <p style="margin-bottom:10px">Say or type any of these — Nexora understands and does it:</p>
-    <span class="cmd">"open Word"</span>
-    <span class="cmd">"open YouTube"</span>
-    <span class="cmd">"search Google for ___"</span>
-    <span class="cmd">"search YouTube for ___"</span>
-    <span class="cmd">"type ___"</span>
-    <span class="cmd">"what time is it"</span>
-    <span class="cmd">"volume up"</span>
-    <p class="note" style="text-align:left">Just fill in the blank — for example "search Google for cats" or "type hello, my name is Ahmad". The full guide is inside the download, in a file called <b>USER-GUIDE.md</b>, and inside Nexora itself — just click <b>❓ Help / How to Use</b>.</p>
+    <h2 data-i18n="v4_h">New in v4 — Floating Nexora Icon</h2>
+    <p data-i18n="v4_p">A small Nexora icon stays on top of every window on your laptop. Drag it anywhere, tap it, and give a 🎤 voice or ⌨ text command — wherever you are.</p>
   </section>
 
   <section>
-    <h2>New in v4 — Floating Nexora Icon</h2>
-    <p style="margin-bottom:10px">A small Nexora "N" icon now <b>stays on top of every window</b> on your laptop — over Word, over Chrome, over anything you are doing. It never gets buried, and it never gets in the way: you place it where you like.</p>
-    <div class="grid">
-      <div class="card"><b>🧭 Drag it anywhere</b>Move the floating icon with your mouse and drop it wherever it suits you — it stays there.</div>
-      <div class="card"><b>🎤 Voice or ⌨ Text</b>Tap the icon to open a mini panel: press 🎤 Voice and speak, or type in the ⌨ box and press ✔ — Nexora does the work right away.</div>
-      <div class="card"><b>⌂ Home in one tap</b>The panel's Home button brings the full Nexora window forward. Hide the icon from the panel, and bring it back any time from the main window.</div>
-    </div>
-    <p class="note" style="text-align:left">Version 4 is also stricter: Nexora only acts on a clear command. An unclear sentence does nothing — never the wrong thing.</p>
+    <h2 data-i18n="online_h">Online or offline?</h2>
+    <p data-i18n="online_p">Nexora is an ONLINE voice assistant — voice needs the internet ON. Some typed commands for programs on your laptop also work offline. Simple rule: keep the internet ON, and everything works.</p>
   </section>
 
-  <section>
-    <h2>Online or Offline?</h2>
-    <p><b>Nexora is an ONLINE voice assistant.</b> Its voice works through the internet, so your internet must be ON when you speak — that is how Nexora hears and understands you.</p>
-    <p style="margin-top:8px">Some <b>typed</b> commands for programs already on your laptop — like opening Notepad or Calculator — can also work offline. But voice, YouTube and search always need internet.</p>
-    <p style="margin-top:8px">Simple rule: <b>keep the internet ON, and everything works.</b></p>
-  </section>
-
-  <footer>
-    Nexora — Test Version v4 • Made for Ahmad • Free (Rs 0)
-  </footer>
+  <footer data-i18n="footer_text">Nexora — Test Version v4 • Free (Rs 0)</footer>
 
 </div>
+<script src="strings.js"></script>
 </body>
 </html>
