@@ -278,7 +278,11 @@ def _extract_query(norm, matched_verb, on_youtube):
     if not on_youtube:
         text = _remove_phrases(text, _GOOGLE_ALIASES)
     text = _remove_phrases(text, SEARCH_FILLERS)
-    return text.strip()
+    # v5: drop a leading English glue word ("...and the cartoon")
+    words = text.split()
+    while words and words[0] in ("and", "the"):
+        words.pop(0)
+    return " ".join(words).strip()
 
 
 def parse_multilingual(text):
