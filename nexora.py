@@ -1,13 +1,27 @@
 """
-Nexora - Voice Laptop Program (Test Version v1)
+Nexora - Voice Laptop Program (Test Version v4)
 ================================================
 A small Windows program you control with your voice.
 
 - Speak (mic button) or type a command, and Nexora does it:
   opens Word / Chrome / Notepad / YouTube, searches Google/YouTube,
   types what you dictate, tells the time, changes volume, and more.
-- English and Roman Urdu commands both work. Command list: README.md
-- Parser lives in nexora_commands.py (pure Python).
+- v2 speaks the WORLD's languages: pick from 60+ recognition
+  languages in the dropdown (nexora_languages.py). Nexora listens
+  in that language, replies in that same language (localised reply
+  phrases for ~21 languages, English replies for the rest), and
+  does the work. Command words are trained for English, Roman Urdu
+  and ~10 more languages (nexora_i18n_commands.py).
+- English and Roman Urdu commands work exactly as in v1.
+- v4 adds the Nexora HOME screen (logo + window icon), a
+  "🎤 Voice" button and a "⌨ Type:" command row, and a small
+  FLOATING Nexora icon that stays on top of every window - drag
+  it anywhere, tap it to give a voice or text command.
+- The v4 parser is accuracy-first: a command fires only when it
+  is the main intent of the sentence (see nexora_commands.py
+  and test_accuracy.py).
+- Parsers live in nexora_commands.py (v1) and
+  nexora_i18n_commands.py (v2 multilingual matcher).
 
 Optional libraries (program still runs without them, only that
 feature is off and Nexora tells you):
@@ -30,6 +44,72 @@ import urllib.parse
 import webbrowser
 
 from nexora_commands import parse_command
+
+# v2 modules - guarded too: if they are somehow missing, Nexora falls
+# back to v1 English/Urdu behaviour instead of crashing.
+try:
+    from nexora_i18n_commands import parse_command_v2
+except Exception:
+    parse_command_v2 = None
+
+try:
+    from nexora_languages import (
+        LANGUAGES,
+        code_from_display,
+        get_replies,
+        locale_display_names,
+    )
+except Exception:
+    LANGUAGES = [("English (US)", "en-US"), ("Urdu (Pakistan)", "ur-PK")]
+    code_from_display = None
+    get_replies = None
+    locale_display_names = None
+
+_FALLBACK_REPLIES = {
+    "opening": "Opening {target}.",
+    "searching": "Searching for {query}.",
+    "typing": "Typing: {text}",
+    "not_understood": "Sorry, I did not understand that command.",
+    "greeting": "Hello! I am Nexora. What can I do for you?",
+    "time_intro": "The time is {value}.",
+    "date_intro": "Today's date is {value}.",
+}
+
+
+def replies_for(locale):
+    """Localised reply templates for a locale (English fallback)."""
+    if get_replies is not None:
+        try:
+            return get_replies(locale)
+        except Exception:
+            pass
+    return _FALLBACK_REPLIES
+
+
+def parse_any(text):
+    """v2 parser when available, else the v1 parser."""
+    if parse_command_v2 is not None:
+        try:
+            return parse_command_v2(text)
+        except Exception:
+            pass
+    return parse_command(text)
+
+
+# Display names used in the localised "Opening X." replies
+TARGET_NAMES = {
+    "open_word": "Microsoft Word",
+    "open_chrome": "Google Chrome",
+    "open_notepad": "Notepad",
+    "open_calculator": "Calculator",
+    "open_paint": "Paint",
+    "open_explorer": "File Explorer",
+    "open_pictures": "Photos",
+    "open_videos": "Videos",
+    "open_downloads": "Downloads",
+    "open_youtube": "YouTube",
+    "open_google": "Google",
+}
 
 # ---------------------------------------------------------------------------
 # Optional libraries - each import is guarded so nothing crashes if missing.
@@ -62,6 +142,77 @@ except Exception:  # pragma: no cover - tkinter ships with Windows Python
 
 IS_WINDOWS = os.name == "nt"
 APP_NAME = "Nexora"
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def resource_path(name):
+    """Absolute path to a bundled resource file (e.g. the logo).
+
+    When Nexora runs frozen as a PyInstaller .exe, bundled data files
+    live in the temporary folder pointed to by sys._MEIPASS; when it
+    runs as a plain script they sit next to nexora.py. Any failure
+    falls back to the script folder, so this can never crash startup.
+    """
+    try:
+        base = sys._MEIPASS  # type: ignore[attr-defined]
+    except Exception:
+        base = APP_DIR
+    return os.path.join(base, name)
+
+
+LOGO_PNG = resource_path("logo-new.png")
+
+# ---------------------------------------------------------------------------
+# Help text - teaches the user how Nexora works (Help button + popup).
+# Simple English, with one short Roman Urdu line at the top.
+# ---------------------------------------------------------------------------
+HELP_TEXT = """Assalam-o-Alaikum! Nexora aap ki awaaz se aap ka laptop chalata hai - neeche asaan steps diye gaye hain.
+
+WHAT IS NEXORA?
+Nexora is a small program for your Windows laptop.
+You speak, and Nexora does the work - it opens programs,
+searches the internet, types for you, and more.
+Nexora also speaks back to you and tells you what it did.
+
+IMPORTANT - NEXORA IS ONLINE
+Voice works online - internet must be ON.
+Nexora listens to your voice through the internet, so keep
+your internet connected when you speak.
+No internet? You can still TYPE a command. Typed commands for
+programs on your laptop (like Notepad or Calculator) can work
+offline, but voice, YouTube and search need internet.
+
+HOW TO USE NEXORA - 4 EASY STEPS
+1. Choose your language from the list at the top.
+2. Click the big blue button:  🎤 Speak
+3. Say one command, clearly. (Or type it and press "Do It".)
+4. Nexora does the work and replies in your language.
+
+EXAMPLE COMMANDS - TRY THESE
+•  open Word
+•  open YouTube
+•  search Google for cats
+•  search YouTube for songs
+•  type hello, my name is Ahmad
+•  what time is it
+•  volume up
+
+TIPS
+• Speak slowly and clearly, close to the mic.
+• One command at a time.
+• If Nexora does not hear you, check your internet and
+  your mic, then try again.
+• You can also type every command - typing always works.
+
+FLOATING NEXORA ICON - NEW IN v4
+A small Nexora "N" icon stays on top of every window.
+• Drag it anywhere on the screen - it stays where you drop it.
+• Tap (click) it to open a mini panel: a 🎤 Voice button, a
+  ⌨ text box with a ✔ button, and a ⌂ Home button that brings
+  the Nexora home window forward.
+• Hide it from the mini panel (✕ Hide icon) and bring it back
+  any time with the "Floating Icon" button in the main window.
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +285,17 @@ class ActionRunner:
     def __init__(self, app):
         self.app = app  # for scheduling dictation paste on the GUI thread
 
+    def _replies(self):
+        locale = "en-US"
+        try:
+            locale = self.app.language_code()
+        except Exception:
+            pass
+        return replies_for(locale)
+
+    def _opening(self, action):
+        return self._replies()["opening"].format(target=TARGET_NAMES.get(action, "it"))
+
     def run(self, result):
         action = result.get("action", "unknown")
         try:
@@ -143,12 +305,12 @@ class ActionRunner:
 
     def _run_inner(self, action, result):
         if action == "greet":
-            return "Salam! Main Nexora hoon. Boliye, kya karun?"
+            return self._replies()["greeting"]
 
         if action == "open_word":
             ok, msg = _launch(_office_word_candidates(), "Microsoft Word")
             if ok:
-                return msg
+                return self._opening(action)
             # Fallback: Word in the browser
             try:
                 webbrowser.open("https://www.office.com/launch/word")
@@ -159,7 +321,7 @@ class ActionRunner:
         if action == "open_chrome":
             ok, msg = _launch(_chrome_candidates(), "Google Chrome")
             if ok:
-                return msg
+                return self._opening(action)
             try:
                 webbrowser.open("https://www.google.com")
                 return "Chrome nahi mila, is liye default browser mein Google khol diya hai."
@@ -168,55 +330,55 @@ class ActionRunner:
 
         if action == "open_notepad":
             ok, msg = _launch(["notepad.exe", "notepad"], "Notepad")
-            return msg
+            return self._opening(action) if ok else msg
 
         if action == "open_calculator":
             ok, msg = _launch(["calc.exe", "calc"], "Calculator")
-            return msg
+            return self._opening(action) if ok else msg
 
         if action == "open_paint":
             ok, msg = _launch(["mspaint.exe", "mspaint", "pbrush.exe"], "Paint")
-            return msg
+            return self._opening(action) if ok else msg
 
         if action == "open_explorer":
             home = os.path.expanduser("~")
-            return "File Explorer khol diya." if _open_folder(home) else "File Explorer nahi khul saka."
+            return self._opening(action) if _open_folder(home) else "File Explorer nahi khul saka."
 
         if action == "open_pictures":
             path = os.path.join(os.path.expanduser("~"), "Pictures")
-            return "Photos wala folder khol diya." if _open_folder(path) else "Photos wala folder nahi khul saka."
+            return self._opening(action) if _open_folder(path) else "Photos wala folder nahi khul saka."
 
         if action == "open_videos":
             path = os.path.join(os.path.expanduser("~"), "Videos")
-            return "Videos wala folder khol diya." if _open_folder(path) else "Videos wala folder nahi khul saka."
+            return self._opening(action) if _open_folder(path) else "Videos wala folder nahi khul saka."
 
         if action == "open_downloads":
             path = os.path.join(os.path.expanduser("~"), "Downloads")
-            return "Downloads wala folder khol diya." if _open_folder(path) else "Downloads wala folder nahi khul saka."
+            return self._opening(action) if _open_folder(path) else "Downloads wala folder nahi khul saka."
 
         if action == "open_youtube":
             webbrowser.open("https://www.youtube.com")
-            return "YouTube khol diya."
+            return self._opening(action)
 
         if action == "open_google":
             webbrowser.open("https://www.google.com")
-            return "Google khol diya."
+            return self._opening(action)
 
         if action == "google_search":
             query = result.get("query", "").strip()
             if not query:
                 webbrowser.open("https://www.google.com")
-                return "Google khol diya - search wali cheez samajh nahi aayi."
+                return self._opening("open_google")
             webbrowser.open("https://www.google.com/search?q=" + urllib.parse.quote_plus(query))
-            return f"Google par search kar diya: {query}"
+            return self._replies()["searching"].format(query=query)
 
         if action == "youtube_search":
             query = result.get("query", "").strip()
             if not query:
                 webbrowser.open("https://www.youtube.com")
-                return "YouTube khol diya - search wali cheez samajh nahi aayi."
+                return self._opening("open_youtube")
             webbrowser.open("https://www.youtube.com/results?search_query=" + urllib.parse.quote_plus(query))
-            return f"YouTube par search kar diya: {query}"
+            return self._replies()["searching"].format(query=query)
 
         if action == "dictate":
             text = result.get("text", "").strip()
@@ -226,11 +388,12 @@ class ActionRunner:
 
         if action == "tell_time":
             now = datetime.datetime.now()
-            return "Abhi ka waqt hai " + now.strftime("%I:%M %p").lstrip("0") + "."
+            value = now.strftime("%I:%M %p").lstrip("0")
+            return self._replies()["time_intro"].format(value=value)
 
         if action == "tell_date":
             today = datetime.date.today()
-            return "Aaj ki tarikh hai " + today.strftime("%d %B %Y") + "."
+            return self._replies()["date_intro"].format(value=today.strftime("%d %B %Y"))
 
         if action == "close_window":
             return self.app.schedule_close_window()
@@ -238,7 +401,7 @@ class ActionRunner:
         if action in ("volume_up", "volume_down", "mute"):
             return self._volume(action)
 
-        return "Ye command samajh nahi aayi. Kuch aur bolein - misal: 'word kholo' ya 'youtube kholo'."
+        return self._replies()["not_understood"]
 
     def _volume(self, action):
         if pyautogui is None:
@@ -265,56 +428,333 @@ class NexoraApp:
         self.tts_engine = None
         self.listening = False
 
-        root.title("Nexora - Voice Laptop Program (Test v1)")
-        root.geometry("640x520")
-        root.minsize(520, 420)
+        root.title("Nexora \u2014 Home (Test v4)")
+        root.geometry("700x720")
+        root.minsize(540, 520)
+        try:
+            root.configure(bg="#0b1020")
+        except Exception:
+            pass
 
-        header = tk.Label(root, text="NEXORA", font=("Segoe UI", 26, "bold"), fg="#2b5cff")
-        header.pack(pady=(12, 0))
+        # --- Nexora branding: logo on the HOME screen + window icon ---
+        # Fully guarded: a missing/failing logo never crashes Nexora.
+        self._logo_full = None
+        self._logo_img = None       # header-size logo
+        self._icon_img = None       # window icon image
+        self._float_img = None      # floating-icon image
+        try:
+            if os.path.isfile(LOGO_PNG):
+                _full = tk.PhotoImage(file=LOGO_PNG)      # 800x800 source
+                self._logo_full = _full
+                self._logo_img = _full.subsample(5, 5)    # ~160px header
+                self._icon_img = _full.subsample(12, 12)  # ~66px icon
+                self._float_img = _full.subsample(12, 12)  # ~66px floating
+                try:
+                    root.iconphoto(True, self._icon_img)
+                except Exception:
+                    pass
+        except Exception:
+            self._logo_full = None
+            self._logo_img = None
+            self._icon_img = None
+            self._float_img = None
+
+        if self._logo_img is not None:
+            tk.Label(root, image=self._logo_img, bg="#0b1020").pack(pady=(12, 0))
+        header = tk.Label(root, text="NEXORA", font=("Segoe UI", 26, "bold"),
+                          fg="#5b8cff", bg="#0b1020")
+        header.pack(pady=(6, 0))
+        tk.Label(root, text="Speak once \u2014 Nexora does it",
+                 font=("Segoe UI", 13, "bold"), fg="#eef1ff", bg="#0b1020").pack()
         tk.Label(root, text="Boliye - kaam ho jayega  |  Speak - and it gets done",
-                 font=("Segoe UI", 11)).pack(pady=(0, 8))
+                 font=("Segoe UI", 11), fg="#c6cdf5", bg="#0b1020").pack(pady=(0, 8))
 
         self.status_var = tk.StringVar(value="Status: Tayyar hai (Ready)")
-        tk.Label(root, textvariable=self.status_var, font=("Segoe UI", 10, "italic")).pack()
+        tk.Label(root, textvariable=self.status_var, font=("Segoe UI", 10, "italic"),
+                 fg="#c6cdf5", bg="#0b1020").pack()
 
-        # Language + speak-back row
-        opts = tk.Frame(root)
+        # Language + speak-back row (v2: full world-language list)
+        opts = tk.Frame(root, bg="#0b1020")
         opts.pack(pady=8)
-        tk.Label(opts, text="Language / Zuban:").grid(row=0, column=0, padx=4)
-        self.lang_var = tk.StringVar(value="English (en-US)")
-        lang_box = ttk.Combobox(opts, textvariable=self.lang_var, state="readonly", width=18,
-                                values=["English (en-US)", "Urdu (ur-PK)"])
+        tk.Label(opts, text="Language / Zuban:", fg="#eef1ff", bg="#0b1020").grid(row=0, column=0, padx=4)
+        if locale_display_names is not None:
+            lang_values = locale_display_names()
+        else:
+            lang_values = [f"{name} ({code})" for name, code in LANGUAGES]
+        self.lang_var = tk.StringVar(value=lang_values[0] if lang_values else "English (US) (en-US)")
+        lang_box = ttk.Combobox(opts, textvariable=self.lang_var, state="readonly", width=34,
+                                values=lang_values)
         lang_box.grid(row=0, column=1, padx=4)
         self.speak_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(opts, text="Bol kar jawab de (Speak back)", variable=self.speak_var).grid(row=0, column=2, padx=8)
+        tk.Checkbutton(opts, text="Bol kar jawab de (Speak back)", variable=self.speak_var,
+                       bg="#0b1020", fg="#eef1ff", activebackground="#0b1020",
+                       activeforeground="#eef1ff", selectcolor="#1a2342").grid(row=0, column=2, padx=8)
 
         # Mic button
-        self.mic_btn = tk.Button(root, text="🎤  Mic - Bolna Shuru Karein (Listen)",
+        self.mic_btn = tk.Button(root, text="🎤 Voice \u2014 Speak (Bolna Shuru Karein)",
                                  font=("Segoe UI", 13, "bold"), bg="#2b5cff", fg="white",
                                  activebackground="#1e44bd", command=self.on_listen_clicked)
         self.mic_btn.pack(pady=6, padx=16, fill="x")
 
+        # Help button - teaches the user how Nexora works
+        tk.Button(root, text="❓ Help / How to Use", font=("Segoe UI", 11, "bold"),
+                  bg="#1a2342", fg="white", activebackground="#28336a",
+                  command=self.show_help).pack(pady=(0, 2), padx=16, fill="x")
+
+        # Floating icon show/hide toggle (the icon itself is built below)
+        self.float_btn = tk.Button(root, text="🧭 Floating Icon: ON \u2014 tap to hide / show",
+                                   font=("Segoe UI", 11), bg="#1a2342", fg="white",
+                                   activebackground="#28336a", command=self.toggle_floating)
+        self.float_btn.pack(pady=(0, 2), padx=16, fill="x")
+
         # Typed command row
-        row = tk.Frame(root)
+        row = tk.Frame(root, bg="#0b1020")
         row.pack(pady=6, padx=16, fill="x")
-        self.entry = tk.Entry(row, font=("Segoe UI", 12))
+        tk.Label(row, text="⌨ Type:", font=("Segoe UI", 12, "bold"),
+                 fg="#9fd0ff", bg="#0b1020").pack(side="left", padx=(0, 6))
+        self.entry = tk.Entry(row, font=("Segoe UI", 12), bg="#121935",
+                              fg="#eef1ff", insertbackground="#eef1ff")
         self.entry.pack(side="left", fill="x", expand=True)
         self.entry.bind("<Return>", lambda _e: self.on_do_it())
-        tk.Button(row, text="Do It / Karo", font=("Segoe UI", 11, "bold"),
+        tk.Button(row, text="✔ Do It", font=("Segoe UI", 11, "bold"),
                   command=self.on_do_it).pack(side="left", padx=(8, 0))
 
         tk.Label(root, text="Misal:  word kholo  •  youtube kholo  •  cats search karo  •  likho mera naam Ahmad hai  •  time batao",
-                 font=("Segoe UI", 9), fg="#555").pack(padx=16, anchor="w")
+                 font=("Segoe UI", 9), fg="#8f9ac9", bg="#0b1020").pack(padx=16, anchor="w")
+
+        tk.Label(root, text=f"🌍 {len(LANGUAGES)} languages: pick yours above — Nexora listens and replies in it. "
+                            "Replies are spoken in the selected language when a Windows voice for it is installed; "
+                            "otherwise the default Windows voice reads them.",
+                 font=("Segoe UI", 9), fg="#555", wraplength=620, justify="left").pack(padx=16, anchor="w")
 
         # Log area
-        self.log_box = scrolledtext.ScrolledText(root, font=("Consolas", 10), height=12, state="disabled")
+        self.log_box = scrolledtext.ScrolledText(root, font=("Consolas", 10), height=12, state="disabled",
+                                                 bg="#0e1430", fg="#eef1ff", insertbackground="#eef1ff")
         self.log_box.pack(pady=8, padx=16, fill="both", expand=True)
 
-        self.log("Nexora shuru ho gaya. Mic dabayein aur bolein, ya neeche command likh kar 'Do It' dabayein.")
+        self.log("👋 Welcome to Nexora v4! Ye aap ki Nexora HOME screen hai - Nexora aap ke laptop ko aap ki awaaz se chalata hai: you speak, Nexora does the work.")
+        self.log("How to use:  1) Choose your language above.  2) Click 🎤 Speak.  3) Say a command.  4) Nexora does it and replies in your language.")
+        self.log("🌐 Voice works online — internet must be ON.")
+        self.log("No mic? Type the command below and press 'Do It'. Need help any time? Click the ❓ Help / How to Use button.")
+        self.log(f"🌍 {len(LANGUAGES)} zubanon mein sun sakta hai - upar apni zuban chunein. Jawab usi zuban mein milega (21 bari zubanon ke jawab unhi ki zuban mein, baqi ke liye English).")
         if sr is None:
             self.log("Note: 'SpeechRecognition' library nahi mili - awaaz sunna band hai, lekin typed commands chalengi. run_nexora.bat se chalane par libraries khud install ho jati hain.")
         if pyttsx3 is None:
             self.log("Note: 'pyttsx3' library nahi mili - Nexora bol kar jawab nahi dega, jawab sirf screen par ayega.")
+        # Floating Nexora icon (v4) - built last, fully guarded
+        self._build_floating()
+        if self.float_win is not None:
+            self.log("🧭 Floating Nexora icon is ON: it stays on top of every window. Drag it anywhere you like - tap it for 🎤 Voice or ⌨ text, wherever you are.")
+
+    # ----- help popup (teaches the user how to use Nexora) -----
+    def show_help(self):
+        try:
+            win = tk.Toplevel(self.root)
+            win.title("Nexora — ❓ Help / How to Use")
+            win.geometry("600x560")
+            win.minsize(420, 380)
+            box = scrolledtext.ScrolledText(win, font=("Segoe UI", 11), wrap="word")
+            box.pack(padx=12, pady=12, fill="both", expand=True)
+            box.insert("end", HELP_TEXT)
+            box.configure(state="disabled")
+            tk.Button(win, text="Close / Band Karein", font=("Segoe UI", 11, "bold"),
+                      command=win.destroy).pack(pady=(0, 12))
+        except Exception:
+            # If the popup cannot open, teach in the log instead.
+            for line in HELP_TEXT.splitlines():
+                self.log(line)
+
+    # ----- floating Nexora icon (v4) -----
+    def _build_floating(self):
+        """
+        Small always-on-top Nexora icon that floats above every other
+        window. Drag it anywhere with the mouse; a tap (click without
+        dragging) opens a mini panel with 🎤 Voice, a ⌨ text box and a
+        ⌂ Home button. Everything is guarded - if the floating window
+        cannot be created, the main window simply works without it.
+        """
+        self.float_win = None
+        self.float_panel = None
+        self.float_visible = False
+        self._float_drag = None
+        try:
+            win = tk.Toplevel(self.root)
+            win.overrideredirect(True)
+            try:
+                win.attributes("-topmost", True)
+            except Exception:
+                pass
+            try:
+                win.configure(bg="#0b1020")
+            except Exception:
+                pass
+            if self._float_img is not None:
+                body = tk.Label(win, image=self._float_img, bg="#0b1020",
+                                bd=0, cursor="hand2")
+            else:
+                # Fallback: navy square with a bold cyan "N"
+                body = tk.Canvas(win, width=64, height=64, bg="#0b1020",
+                                 highlightthickness=0, cursor="hand2")
+                body.create_rectangle(4, 4, 60, 60, fill="#121935",
+                                      outline="#38e1ff", width=2)
+                body.create_text(32, 34, text="N", fill="#38e1ff",
+                                 font=("Segoe UI", 30, "bold"))
+            body.pack()
+            # Bind on the body widget only (its bindtags include the
+            # Toplevel, so also binding the window would double-fire).
+            body.bind("<ButtonPress-1>", self._float_press)
+            body.bind("<B1-Motion>", self._float_move)
+            body.bind("<ButtonRelease-1>", self._float_release)
+            body.bind("<Button-3>", lambda _e: self.hide_floating())
+            try:
+                x = max(0, self.root.winfo_screenwidth() - 96)
+            except Exception:
+                x = 100
+            win.geometry(f"+{x}+110")
+            self.float_win = win
+            self.float_visible = True
+        except Exception:
+            self.float_win = None
+            self.float_visible = False
+
+    def _float_press(self, event):
+        if self.float_win is None:
+            return
+        try:
+            self._float_drag = {
+                "dx": event.x_root - self.float_win.winfo_x(),
+                "dy": event.y_root - self.float_win.winfo_y(),
+                "sx": event.x_root, "sy": event.y_root, "moved": False,
+            }
+        except Exception:
+            self._float_drag = None
+
+    def _float_move(self, event):
+        if not self._float_drag or self.float_win is None:
+            return
+        try:
+            if (abs(event.x_root - self._float_drag["sx"]) > 4
+                    or abs(event.y_root - self._float_drag["sy"]) > 4):
+                self._float_drag["moved"] = True
+            self.float_win.geometry(
+                f"+{event.x_root - self._float_drag['dx']}"
+                f"+{event.y_root - self._float_drag['dy']}")
+        except Exception:
+            pass
+
+    def _float_release(self, _event):
+        moved = bool(self._float_drag and self._float_drag.get("moved"))
+        self._float_drag = None
+        if not moved:
+            self._toggle_float_panel()
+
+    def _toggle_float_panel(self):
+        try:
+            if (self.float_panel is not None
+                    and self.float_panel.winfo_exists()
+                    and self.float_panel.winfo_viewable()):
+                self.float_panel.withdraw()
+                return
+            self._show_float_panel()
+        except Exception:
+            pass
+
+    def _show_float_panel(self):
+        try:
+            if self.float_panel is None or not self.float_panel.winfo_exists():
+                p = tk.Toplevel(self.root)
+                p.overrideredirect(True)
+                try:
+                    p.attributes("-topmost", True)
+                except Exception:
+                    pass
+                p.configure(bg="#121935")
+                tk.Label(p, text="NEXORA", font=("Segoe UI", 11, "bold"),
+                         fg="#5b8cff", bg="#121935").pack(padx=10, pady=(8, 2))
+                tk.Button(p, text="🎤 Voice — Speak", font=("Segoe UI", 11, "bold"),
+                          bg="#2b5cff", fg="white", activebackground="#1e44bd",
+                          command=self._panel_voice).pack(padx=10, pady=4, fill="x")
+                rowp = tk.Frame(p, bg="#121935")
+                rowp.pack(padx=10, pady=4, fill="x")
+                tk.Label(rowp, text="⌨", font=("Segoe UI", 12), fg="#9fd0ff",
+                         bg="#121935").pack(side="left")
+                self.float_entry = tk.Entry(rowp, font=("Segoe UI", 11), width=16,
+                                            bg="#0e1430", fg="#eef1ff",
+                                            insertbackground="#eef1ff")
+                self.float_entry.pack(side="left", padx=4)
+                self.float_entry.bind("<Return>", lambda _e: self._panel_do_it())
+                tk.Button(rowp, text="✔", font=("Segoe UI", 11, "bold"),
+                          command=self._panel_do_it).pack(side="left")
+                tk.Button(p, text="⌂ Home", font=("Segoe UI", 10),
+                          bg="#1a2342", fg="white", activebackground="#28336a",
+                          command=self.show_home).pack(padx=10, pady=4, fill="x")
+                tk.Button(p, text="✕ Hide icon", font=("Segoe UI", 10),
+                          bg="#1a2342", fg="white", activebackground="#28336a",
+                          command=self.hide_floating).pack(padx=10, pady=(4, 8), fill="x")
+                self.float_panel = p
+            fx = self.float_win.winfo_x()
+            fy = self.float_win.winfo_y()
+            self.float_panel.deiconify()
+            self.float_panel.geometry(f"+{max(0, fx - 190)}+{fy + 70}")
+            self.float_panel.lift()
+        except Exception:
+            pass
+
+    def _panel_voice(self):
+        # Bring the home window forward so the reply/log is visible,
+        # then start listening exactly like the main 🎤 button.
+        self.show_home()
+        self.on_listen_clicked()
+
+    def _panel_do_it(self):
+        try:
+            sentence = self.float_entry.get()
+            self.float_entry.delete(0, "end")
+        except Exception:
+            sentence = ""
+        if sentence.strip():
+            self.show_home()
+            self.handle_command(sentence)
+
+    def show_home(self):
+        """Bring the Nexora home (main) window to the front."""
+        try:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+        except Exception:
+            pass
+
+    def hide_floating(self):
+        try:
+            if self.float_panel is not None:
+                self.float_panel.withdraw()
+            if self.float_win is not None:
+                self.float_win.withdraw()
+            self.float_visible = False
+            self.float_btn.configure(text="🧭 Floating Icon: OFF — tap to show")
+        except Exception:
+            pass
+
+    def toggle_floating(self):
+        """Main-window button: hide the floating icon, or bring it back."""
+        try:
+            if self.float_visible:
+                self.hide_floating()
+            else:
+                if self.float_win is None:
+                    self._build_floating()
+                else:
+                    self.float_win.deiconify()
+                    try:
+                        self.float_win.attributes("-topmost", True)
+                    except Exception:
+                        pass
+                    self.float_win.lift()
+                self.float_visible = True
+                self.float_btn.configure(text="🧭 Floating Icon: ON — tap to hide / show")
+        except Exception:
+            pass
 
     # ----- basics -----
     def log(self, text):
@@ -329,10 +769,26 @@ class NexoraApp:
     def speak(self, text):
         if not self.speak_var.get() or pyttsx3 is None:
             return
+        lang = self.language_code().split("-")[0].lower()
         def _talk():
             try:
                 if self.tts_engine is None:
                     self.tts_engine = pyttsx3.init()
+                # Best effort: if Windows has a voice for the selected
+                # language, use it; otherwise the default voice reads
+                # the (localised) text - never a crash either way.
+                try:
+                    for voice in self.tts_engine.getProperty("voices"):
+                        blob = " ".join([
+                            str(getattr(voice, "id", "")),
+                            str(getattr(voice, "name", "")),
+                            " ".join(str(x) for x in (getattr(voice, "languages", None) or [])),
+                        ]).lower()
+                        if lang and lang in blob:
+                            self.tts_engine.setProperty("voice", voice.id)
+                            break
+                except Exception:
+                    pass
                 self.tts_engine.say(text)
                 self.tts_engine.runAndWait()
             except Exception:
@@ -351,7 +807,7 @@ class NexoraApp:
             return
         self.log("Aap ne kaha: " + sentence)
         self.set_status("Kaam kar raha hai... (Working)")
-        result = parse_command(sentence)
+        result = parse_any(sentence)
         message = self.runner.run(result)
         if message:  # dictation/close schedule their own final message
             self.answer(message)
@@ -378,17 +834,17 @@ class NexoraApp:
             self.log("Dictation text (copy kar lein): " + text)
             return "Text clipboard par nahi ja saka - upar log mein text de diya hai, wahan se copy kar lein."
         self.log(f"Dictation tayyar hai: \"{text}\" - 3 second mein paste hoga. Jaldi se Word/Notepad ki window par click karein!")
-        self.speak("Teen second mein likh dunga. Apni window par click karein.")
         self.root.after(3000, lambda: self._do_paste(text))
         return ""  # final message comes from _do_paste
 
     def _do_paste(self, text):
+        typing_reply = replies_for(self.language_code())["typing"].format(text=text)
         try:
             if pyautogui is not None:
                 pyautogui.hotkey("ctrl", "v")
-                self.answer("Likh diya: " + text)
+                self.answer(typing_reply)
             else:
-                self.answer("Text clipboard par hai - apni window mein Ctrl+V dabayein, text aa jayega.")
+                self.answer(typing_reply + " (Text clipboard par hai - apni window mein Ctrl+V dabayein.)")
         except Exception:
             self.answer("Paste nahi ho saka - Ctrl+V khud dabayein, text clipboard par hai.")
 
@@ -409,7 +865,16 @@ class NexoraApp:
 
     # ----- listening -----
     def language_code(self):
-        return "ur-PK" if "ur-PK" in self.lang_var.get() else "en-US"
+        display = self.lang_var.get()
+        if code_from_display is not None:
+            try:
+                return code_from_display(display)
+            except Exception:
+                pass
+        # Fallback parsing if nexora_languages was unavailable
+        if "(" in display and ")" in display:
+            return display[display.rfind("(") + 1:display.rfind(")")].strip()
+        return "en-US"
 
     def on_listen_clicked(self):
         if self.listening:
@@ -447,12 +912,12 @@ class NexoraApp:
 
     def _heard(self, heard):
         self.listening = False
-        self.mic_btn.configure(text="🎤  Mic - Bolna Shuru Karein (Listen)", state="normal")
+        self.mic_btn.configure(text="🎤 Voice \u2014 Speak (Bolna Shuru Karein)", state="normal")
         self.handle_command(heard)
 
     def _listen_done(self, message):
         self.listening = False
-        self.mic_btn.configure(text="🎤  Mic - Bolna Shuru Karein (Listen)", state="normal")
+        self.mic_btn.configure(text="🎤 Voice \u2014 Speak (Bolna Shuru Karein)", state="normal")
         if message:
             self.answer(message)
         else:
