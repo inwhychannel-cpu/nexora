@@ -1,0 +1,64 @@
+# =====================================================================
+#  Nexora — Build Windows EXE (GitHub Actions)
+# =====================================================================
+#  HOW TO USE:
+#    1. Upload this file to the repo as:  .github/workflows/build.yml
+#    2. In the repo, open the "Actions" tab -> "Build Nexora EXE"
+#       -> "Run workflow".
+#    3. When it finishes, Nexora.exe is published as the asset of the
+#       GitHub Release "nexora-v6", so the website download link
+#       .../releases/latest/download/Nexora.exe works.
+#
+#  !!! IMPORTANT — FILES THAT MUST ALSO BE AT THE REPO ROOT !!!
+#  The PyInstaller step below needs these files at the repository
+#  root, next to nexora.py. If any of them is missing, the build
+#  will FAIL or the .exe will have no icon / no logo / no tiles:
+#      nexora.py               (v6, uses resource_path)
+#      nexora_commands.py      (v6)
+#      nexora_languages.py
+#      nexora_i18n_commands.py
+#      requirements.txt
+#      nexora.ico
+#      logo-new.png
+#      assets/                 (picture tiles + background — whole folder!)
+#          tile_voice.png, tile_apps.png,
+#          tile_search.png, tile_languages.png, bg_main.png
+# =====================================================================
+
+name: Build Nexora EXE
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install libraries + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Build Nexora.exe (one file, no console window)
+        run: pyinstaller --noconfirm --onefile --windowed --name Nexora --icon nexora.ico --add-data "logo-new.png;." --add-data "assets;assets" nexora.py
+
+      - name: Publish Nexora.exe as a GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "nexora-v6"
+          name: "Nexora v6 (Windows EXE)"
+          files: dist/Nexora.exe
+          fail_on_unmatched_files: true
