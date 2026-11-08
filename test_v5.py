@@ -120,9 +120,11 @@ try:
             return "en-US"
     runner = nexora.ActionRunner(_FakeApp())
     msg = runner.run({"action": "generic_open", "name": "zzznotanapp"})
+    # v6: the not-found reply is the LOCALISED not_found string (the
+    # old hardcoded Roman Urdu sentence was removed on purpose).
     check_true("generic_open runner: not-found reply, nothing opened",
                isinstance(msg, str) and "zzznotanapp" in msg
-               and "nahi mila" in msg,
+               and "was not found on this laptop" in msg,
                f"got {msg!r}")
     check_true("find_app returns None for a missing app",
                nexora.find_app("zzznotanapp") is None)

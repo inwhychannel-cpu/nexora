@@ -1,5 +1,5 @@
 """
-Nexora - Voice Laptop Program (Test Version v5)
+Nexora - Voice Laptop Program (Test Version v6)
 ================================================
 A small Windows program you control with your voice.
 
@@ -28,6 +28,23 @@ A small Windows program you control with your voice.
     "open <any app name>" lookup.
   * SMARTER PHRASING: polite lead-ins ("nexora please ...",
     "can you ...", "and ...") are understood (nexora_commands.py).
+- v6 changes (from real user testing of v5 on a 1366x768 laptop):
+  * WINDOW FITS SMALL SCREENS: the window sizes itself from the
+    real screen, the header is compact, and the 4 circle buttons
+    sit in a compact 2x2 grid - nothing is cut off any more.
+  * PHOTOS ARE THE BACKGROUND: the 4 picture tiles now form one
+    dimmed background photo (assets/bg_main.png) behind everything;
+    the working panels stay solid navy so text is easy to read.
+  * TWO-SIDED CONVERSATION: what YOU said appears in the LEFT
+    pane, what NEXORA did appears in the RIGHT pane.
+  * FULLY LOCALISED SCREEN TEXT: every label, status and message
+    comes from the selected language's strings - with English
+    selected the screen is pure English (no Roman Urdu anywhere).
+  * SHORT + MISHEARD COMMANDS WORK: "desktop", "music",
+    "documents", "open C drive", and misheard targets are
+    repaired ("destop" -> desktop) by the v6 parser.
+  * CALMER MIC: the always-listen loop re-calibrates to the
+    room noise at startup and after repeated failures.
 - The parser is accuracy-first: a command fires only when it is
   the main intent of the sentence (see nexora_commands.py and
   test_accuracy.py). Parsers live in nexora_commands.py (v1) and
@@ -86,10 +103,21 @@ _FALLBACK_REPLIES = {
     "opening": "Opening {target}.",
     "searching": "Searching for {query}.",
     "typing": "Typing: {text}",
-    "not_understood": "Sorry, I did not understand that command.",
+    "not_understood": "Sorry, I did not understand that command. Try saying 'open YouTube' or 'search for cats'.",
     "greeting": "Hello! I am Nexora. What can I do for you?",
     "time_intro": "The time is {value}.",
     "date_intro": "Today's date is {value}.",
+    # v6 GUI text keys (mirror of nexora_languages English UI set)
+    "subtitle": "Speak \u2014 and it gets done",
+    "you_said": "You said:",
+    "nexora_did": "Nexora:",
+    "not_found": "'{name}' was not found on this laptop, so nothing was opened. Please check the name and try again.",
+    "listening_on": "Listening is ON \u2014 just speak.",
+    "listening_off": "Listening is OFF.",
+    "ready_status": "Ready",
+    "mic_error": "The microphone could not be heard \u2014 please check the mic and your internet.",
+    "examples_line": "Examples: open Word \u2022 open YouTube \u2022 search for cats \u2022 type my name is Ahmad \u2022 tell the time",
+    "speak_back_label": "Speak back (voice reply)",
 }
 
 
@@ -128,6 +156,8 @@ TARGET_NAMES = {
     "open_google": "Google",
     "open_desktop": "Desktop",
     "open_this_pc": "This PC",
+    "open_documents": "Documents",
+    "open_music": "Music",
 }
 
 # ---------------------------------------------------------------------------
@@ -186,11 +216,9 @@ TILE_FILES = ("tile_voice.png", "tile_apps.png", "tile_search.png",
 
 # ---------------------------------------------------------------------------
 # Help text - teaches the user how Nexora works (Help button + popup).
-# Simple English, with one short Roman Urdu line at the top.
+# Pure simple English - the app screen never shows Roman Urdu.
 # ---------------------------------------------------------------------------
-HELP_TEXT = """Assalam-o-Alaikum! Nexora aap ki awaaz se aap ka laptop chalata hai - neeche asaan steps diye gaye hain.
-
-WHAT IS NEXORA?
+HELP_TEXT = """WHAT IS NEXORA?
 Nexora is a small program for your Windows laptop.
 You speak, and Nexora does the work - it opens programs,
 searches the internet, types for you, and more.
@@ -205,13 +233,14 @@ programs on your laptop (like Notepad or Calculator) can work
 offline, but voice, YouTube and search need internet.
 
 LANGUAGE - STARTS IN ENGLISH
-Nexora always starts in English. To change the language,
-tap the blue Language circle button on the left and pick
-your language from the list. Nexora then listens and
-replies in that language.
+Nexora always starts in English, and the whole screen is in
+the language you pick. To change the language, tap the
+Language circle button and pick your language from the list.
+Nexora then listens, replies and shows its screen in that
+language.
 
-HOW TO USE NEXORA - ALWAYS-LISTEN (NEW IN v5)
-1. Tap the Voice circle button on the left ONE time.
+HOW TO USE NEXORA - ALWAYS-LISTEN
+1. Tap the Voice circle button ONE time.
    The ring turns GREEN and Nexora keeps listening.
 2. Just speak your commands, one after another - you do
    NOT need to click again for every command.
@@ -219,21 +248,34 @@ HOW TO USE NEXORA - ALWAYS-LISTEN (NEW IN v5)
    Nexora never switches listening off by itself - it
    stays ON until you tap it off.
 You can also type a command in the box on the right and
-press "Do It" - typing always works too.
+press the tick button - typing always works too.
 
-EXAMPLE COMMANDS - TRY THESE
+THE TWO BOXES ON THE RIGHT
+The LEFT box shows what YOU said.
+The RIGHT box shows what NEXORA did.
+So you can always see your words and Nexora's work side
+by side.
+
+SHORT COMMANDS ARE ENOUGH
+You do not need long perfect sentences. Short commands work:
+•  desktop
+•  documents
+•  music
+•  open C drive        (any drive letter works)
 •  open Word
 •  open YouTube
-•  open desktop
 •  open my computer
 •  open Spotify        (any app, by its name)
+•  play songs          (plays on YouTube)
 •  search Google for cats
 •  search YouTube for songs
 •  type hello, my name is Ahmad
 •  what time is it
 •  volume up
-You can speak naturally: "Nexora, please open YouTube"
-and "can you open Chrome" also work.
+Small hearing mistakes are repaired too - if you say
+"destop", Nexora understands "desktop".
+You can also speak naturally: "Nexora, please open
+YouTube" and "can you open Chrome" work too.
 
 TIPS
 • Speak slowly and clearly, close to the mic.
@@ -245,10 +287,10 @@ FLOATING NEXORA ICON
 A small Nexora "N" icon stays on top of every window.
 • Drag it anywhere on the screen - it stays where you drop it.
 • Tap (click) it to open a mini panel: a Voice button (the
-  same always-listen ON/OFF), a text box with a ✔ button,
+  same always-listen ON/OFF), a text box with a tick button,
   and a Home button that brings the Nexora window forward.
 • The icon's ring turns GREEN while Nexora is listening.
-• Hide it from the mini panel (✕ Hide icon) and bring it back
+• Hide it from the mini panel (Hide icon) and bring it back
   any time with the Floating circle button in the main window.
 """
 
@@ -445,17 +487,17 @@ def _launch(candidates, friendly_name):
     paths) using the strong launch layer. Returns (ok, message).
     """
     if not IS_WINDOWS:
-        return False, f"{friendly_name} sirf Windows par khulta hai - ye laptop Windows ka nahi lagta."
+        return False, f"{friendly_name} only opens on Windows - this does not look like a Windows laptop."
     for cand in candidates:
         try:
             if os.path.isabs(cand):
                 if os.path.isfile(cand) and _startfile(cand):
-                    return True, f"{friendly_name} khol diya."
+                    return True, f"Opening {friendly_name}."
             elif try_launch(cand):
-                return True, f"{friendly_name} khol diya."
+                return True, f"Opening {friendly_name}."
         except Exception:
             continue
-    return False, f"{friendly_name} is laptop par nahi mila. Shayad wo install nahi hai."
+    return False, f"{friendly_name} was not found on this laptop. It may not be installed."
 
 
 # ---------------------------------------------------------------------------
@@ -481,7 +523,7 @@ class ActionRunner:
         try:
             return self._run_inner(action, result)
         except Exception as exc:  # absolute safety net
-            return f"Ek masla aa gaya ({exc}) - dobara koshish karein."
+            return f"Something went wrong ({exc}) - please try again."
 
     def _run_inner(self, action, result):
         if action == "greet":
@@ -494,7 +536,7 @@ class ActionRunner:
             # Fallback: Word in the browser
             try:
                 webbrowser.open("https://www.office.com/launch/word")
-                return "Word laptop par nahi mila, is liye Word ka online version Chrome mein khol diya hai."
+                return "Word was not found on this laptop, so I opened the online version of Word in the browser."
             except Exception:
                 return msg
 
@@ -504,7 +546,7 @@ class ActionRunner:
                 return self._opening(action)
             try:
                 webbrowser.open("https://www.google.com")
-                return "Chrome nahi mila, is liye default browser mein Google khol diya hai."
+                return "Chrome was not found, so I opened Google in the default browser."
             except Exception:
                 return msg
 
@@ -522,23 +564,39 @@ class ActionRunner:
 
         if action == "open_explorer":
             home = os.path.expanduser("~")
-            return self._opening(action) if _open_folder(home) else "File Explorer nahi khul saka."
+            return self._opening(action) if _open_folder(home) else "File Explorer could not be opened."
 
         if action == "open_pictures":
             path = os.path.join(os.path.expanduser("~"), "Pictures")
-            return self._opening(action) if _open_folder(path) else "Photos wala folder nahi khul saka."
+            return self._opening(action) if _open_folder(path) else "The Photos folder could not be opened."
 
         if action == "open_videos":
             path = os.path.join(os.path.expanduser("~"), "Videos")
-            return self._opening(action) if _open_folder(path) else "Videos wala folder nahi khul saka."
+            return self._opening(action) if _open_folder(path) else "The Videos folder could not be opened."
 
         if action == "open_downloads":
             path = os.path.join(os.path.expanduser("~"), "Downloads")
-            return self._opening(action) if _open_folder(path) else "Downloads wala folder nahi khul saka."
+            return self._opening(action) if _open_folder(path) else "The Downloads folder could not be opened."
 
         if action == "open_desktop":
             path = os.path.join(os.path.expanduser("~"), "Desktop")
-            return self._opening(action) if _open_folder(path) else "Desktop folder nahi khul saka."
+            return self._opening(action) if _open_folder(path) else "The Desktop folder could not be opened."
+
+        if action == "open_documents":
+            path = os.path.join(os.path.expanduser("~"), "Documents")
+            return self._opening(action) if _open_folder(path) else "The Documents folder could not be opened."
+
+        if action == "open_music":
+            path = os.path.join(os.path.expanduser("~"), "Music")
+            return self._opening(action) if _open_folder(path) else "The Music folder could not be opened."
+
+        if action == "open_drive":
+            letter = str(result.get("drive") or "C").strip().upper()[:1] or "C"
+            if not IS_WINDOWS:
+                return f"Drive {letter} can only be opened on a Windows laptop."
+            if _startfile(letter + ":\\"):
+                return self._replies()["opening"].format(target=f"Drive {letter}")
+            return f"Drive {letter} could not be opened."
 
         if action == "open_this_pc":
             if IS_WINDOWS:
@@ -549,7 +607,7 @@ class ActionRunner:
                 except Exception:
                     pass
             home = os.path.expanduser("~")
-            return self._opening(action) if _open_folder(home) else "This PC nahi khul saka."
+            return self._opening(action) if _open_folder(home) else "This PC could not be opened."
 
         if action == "generic_open":
             name = str(result.get("name", "")).strip()
@@ -557,8 +615,7 @@ class ActionRunner:
                 return self._replies()["not_understood"]
             if try_launch(name):
                 return self._replies()["opening"].format(target=name)
-            return (f"'{name}' is laptop par nahi mila - is liye kuch "
-                    f"khula bhi nahi. Naam check karke dobara bolein.")
+            return self._replies()["not_found"].format(name=name)
 
         if action == "open_youtube":
             webbrowser.open("https://www.youtube.com")
@@ -587,7 +644,7 @@ class ActionRunner:
         if action == "dictate":
             text = result.get("text", "").strip()
             if not text:
-                return "Likhne wali cheez samajh nahi aayi - 'likho' ke baad apna jumla bolein."
+                return "I did not catch what to type - say 'type' followed by your sentence."
             return self.app.schedule_dictation_paste(text)
 
         if action == "tell_time":
@@ -609,24 +666,26 @@ class ActionRunner:
 
     def _volume(self, action):
         if pyautogui is None:
-            return "Volume badalna abhi mumkin nahi (pyautogui library missing hai) - keyboard ke volume button use karein."
+            return "Volume cannot be changed right now (the pyautogui library is missing) - please use the keyboard volume keys."
         try:
             if action == "mute":
                 pyautogui.press("volumemute")
-                return "Awaz band kar di (mute)."
+                return "Muted."
             key = "volumeup" if action == "volume_up" else "volumedown"
             for _ in range(5):
                 pyautogui.press(key)
-            return "Volume tez kar diya." if action == "volume_up" else "Volume kam kar diya."
+            return "Volume turned up." if action == "volume_up" else "Volume turned down."
         except Exception:
-            return "Volume nahi badal saka."
+            return "The volume could not be changed."
 
 
 # ---------------------------------------------------------------------------
 # GUI
 # ---------------------------------------------------------------------------
-BG = "#0b1020"
-PANEL = "#121935"
+BG = "#0a0e22"           # root / header tone (sits over the photo)
+PANEL = "#121935"        # floating mini window
+PANEL_BG = "#0d1330"     # solid deep-navy foreground panels (v6)
+TEXT_BG = "#0a0f28"      # inset text areas (entry / panes)
 CARD = "#1a2342"
 RING_OFF = "#38e1ff"     # cyan ring - listening OFF
 RING_ON = "#2eff8a"      # bright green ring - listening ON
@@ -644,9 +703,18 @@ class NexoraApp:
         self._listen_thread = None
         self._listen_error_logged = False
 
-        root.title("Nexora \u2014 Home (Test v5)")
-        root.geometry("1180x780")
-        root.minsize(940, 660)
+        root.title("Nexora \u2014 Home (Test v6)")
+        # v6: size the window from the REAL screen so nothing is cut
+        # off on a 1366x768 laptop (v5's fixed 1180x780 overflowed).
+        try:
+            screen_w = root.winfo_screenwidth()
+            screen_h = root.winfo_screenheight()
+        except Exception:
+            screen_w, screen_h = 1366, 768
+        win_w = min(1180, max(900, screen_w - 16))
+        win_h = min(740, max(600, screen_h - 64))
+        root.geometry(f"{win_w}x{win_h}")
+        root.minsize(900, 600)
         try:
             root.configure(bg=BG)
         except Exception:
@@ -665,7 +733,7 @@ class NexoraApp:
             if os.path.isfile(LOGO_PNG):
                 _full = tk.PhotoImage(file=LOGO_PNG)      # 800x800 source
                 self._logo_full = _full
-                self._logo_img = _full.subsample(5, 5)    # ~160px header
+                self._logo_img = _full.subsample(7, 7)    # ~114px header
                 self._icon_img = _full.subsample(12, 12)  # ~66px icon
                 self._float_img = _full.subsample(12, 12)  # ~66px floating
                 try:
@@ -678,7 +746,19 @@ class NexoraApp:
             self._icon_img = None
             self._float_img = None
 
-        # --- picture tiles (v5) ---
+        # --- v6 background photo: the 4 tiles as ONE dimmed picture ---
+        self._bg_img = None
+        try:
+            bg_path = resource_path(os.path.join("assets", "bg_main.png"))
+            if os.path.isfile(bg_path):
+                self._bg_img = tk.PhotoImage(file=bg_path)   # 1280x800
+                bg_label = tk.Label(root, image=self._bg_img, bd=0)
+                bg_label.place(x=0, y=0)   # behind every other widget
+        except Exception:
+            self._bg_img = None
+
+        # --- picture tiles kept loaded (v5 strip removed in v6 - the
+        # tiles now live inside the background photo above) ---
         self._tile_full = []
         self._tile_imgs = []
         for fname in TILE_FILES:
@@ -687,51 +767,52 @@ class NexoraApp:
                 if os.path.isfile(path):
                     _img = tk.PhotoImage(file=path)       # 560x340 source
                     self._tile_full.append(_img)
-                    self._tile_imgs.append(_img.subsample(2, 2))  # 280x170
+                    self._tile_imgs.append(_img.subsample(3, 3))  # ~186x113
             except Exception:
                 continue
 
-        # ============ HEADER (centered) ============
-        hdr = tk.Frame(root, bg=BG)
-        hdr.pack(fill="x")
-        if self._logo_img is not None:
-            tk.Label(hdr, image=self._logo_img, bg=BG).pack(pady=(10, 0))
-        tk.Label(hdr, text="NEXORA", font=("Segoe UI", 26, "bold"),
-                 fg="#5b8cff", bg=BG).pack(pady=(4, 0))
-        tk.Label(hdr, text="Speak once \u2014 Nexora does it",
-                 font=("Segoe UI", 13, "bold"), fg="#eef1ff", bg=BG).pack()
-        tk.Label(hdr, text="Boliye - kaam ho jayega  |  Speak - and it gets done",
-                 font=("Segoe UI", 11), fg="#c6cdf5", bg=BG).pack(pady=(0, 4))
-
-        self.status_var = tk.StringVar(value="Status: Tayyar hai (Ready)")
-        tk.Label(hdr, textvariable=self.status_var, font=("Segoe UI", 10, "italic"),
-                 fg="#c6cdf5", bg=BG).pack()
-
-        # Speak-back checkbox (header area, top-right corner)
+        # Language state must exist before any localised label is made
         self.lang_var = tk.StringVar(value=self._default_display())
         self.speak_var = tk.BooleanVar(value=True)
+        _r0 = replies_for(DEFAULT_LOCALE)   # the app always starts English
+
+        # ============ HEADER (centered, compact, over the photo) ====
+        # Widgets sit directly on the root so the dimmed background
+        # photo shows around them; each label's own bg is the header
+        # tone #0A0E22 (BG) so the text stays readable.
+        if self._logo_img is not None:
+            tk.Label(root, image=self._logo_img, bg=BG).pack(pady=(8, 0))
+        tk.Label(root, text="NEXORA", font=("Segoe UI", 24, "bold"),
+                 fg="#5b8cff", bg=BG).pack(pady=(2, 0))
+        tk.Label(root, text="Speak once \u2014 Nexora does it",
+                 font=("Segoe UI", 12, "bold"), fg="#eef1ff", bg=BG).pack()
+        self.subtitle_label = tk.Label(
+            root, text=_r0["subtitle"], font=("Segoe UI", 11),
+            fg="#c6cdf5", bg=BG)
+        self.subtitle_label.pack(pady=(0, 2))
+
+        self.status_var = tk.StringVar(value=_r0["ready_status"])
+        tk.Label(root, textvariable=self.status_var,
+                 font=("Segoe UI", 10, "italic"),
+                 fg="#9fd0ff", bg=BG).pack()
+
+        # Speak-back checkbox (top-right corner of the window)
+        self.speak_check = None
         try:
-            tk.Checkbutton(hdr, text="Bol kar jawab de (Speak back)",
-                           variable=self.speak_var, bg=BG, fg="#eef1ff",
-                           activebackground=BG, activeforeground="#eef1ff",
-                           selectcolor=CARD).place(relx=1.0, x=-10, y=8, anchor="ne")
+            self.speak_check = tk.Checkbutton(
+                root, text=_r0["speak_back_label"],
+                variable=self.speak_var, bg=BG, fg="#eef1ff",
+                activebackground=BG, activeforeground="#eef1ff",
+                selectcolor=CARD, font=("Segoe UI", 9))
+            self.speak_check.place(relx=1.0, x=-8, y=6, anchor="ne")
         except Exception:
-            pass
+            self.speak_check = None
 
-        # ============ TILE STRIP ============
-        if self._tile_imgs:
-            strip = tk.Frame(root, bg=BG)
-            strip.pack(pady=(8, 2))
-            for img in self._tile_imgs:
-                tk.Label(strip, image=img, bg=BG, bd=0).pack(side="left", padx=3)
-
-        # ============ BODY: circles LEFT, type+log RIGHT ============
-        body = tk.Frame(root, bg=BG)
-        body.pack(fill="both", expand=True, padx=12, pady=(6, 10))
-
-        left = tk.Frame(body, bg=BG, width=132)
-        left.pack(side="left", fill="y", padx=(0, 10))
-        left.pack_propagate(False)
+        # ============ BODY: circles LEFT, type + two panes RIGHT ====
+        # The two panels are solid deep-navy (PANEL_BG) so text stays
+        # readable; the dimmed photo shows in the gaps around them.
+        left = tk.Frame(root, bg=PANEL_BG)
+        left.pack(side="left", fill="y", padx=(10, 5), pady=(8, 10))
 
         self.circle_btns = {}
         self.circle_btns["voice"] = self._make_circle(
@@ -742,46 +823,74 @@ class NexoraApp:
             left, "❓", "Help", self.show_help)
         self.circle_btns["floating"] = self._make_circle(
             left, "🧭", "Floating", self.toggle_floating)
-        for btn in self.circle_btns.values():
-            btn["canvas"].pack(pady=7)
+        _grid_pos = {"voice": (0, 0), "language": (0, 1),
+                     "help": (1, 0), "floating": (1, 1)}
+        for _key, _btn in self.circle_btns.items():
+            _r, _c = _grid_pos[_key]
+            _btn["canvas"].grid(row=_r, column=_c, padx=3, pady=3)
 
-        right = tk.Frame(body, bg=BG)
-        right.pack(side="left", fill="both", expand=True)
+        right = tk.Frame(root, bg=PANEL_BG)
+        right.pack(side="left", fill="both", expand=True, padx=(5, 10),
+                   pady=(8, 10))
 
         # Typed command row (top of the right side)
-        row = tk.Frame(right, bg=BG)
-        row.pack(fill="x")
-        tk.Label(row, text="⌨ Type:", font=("Segoe UI", 12, "bold"),
-                 fg="#9fd0ff", bg=BG).pack(side="left", padx=(0, 6))
-        self.entry = tk.Entry(row, font=("Segoe UI", 12), bg=PANEL,
+        row = tk.Frame(right, bg=PANEL_BG)
+        row.pack(fill="x", padx=8, pady=(8, 0))
+        self.type_label = tk.Label(
+            row, text=self._type_label_text(_r0),
+            font=("Segoe UI", 12, "bold"), fg="#9fd0ff", bg=PANEL_BG)
+        self.type_label.pack(side="left", padx=(0, 6))
+        self.entry = tk.Entry(row, font=("Segoe UI", 12), bg=TEXT_BG,
                               fg="#eef1ff", insertbackground="#eef1ff")
         self.entry.pack(side="left", fill="x", expand=True)
         self.entry.bind("<Return>", lambda _e: self.on_do_it())
-        tk.Button(row, text="✔ Do It", font=("Segoe UI", 11, "bold"),
+        tk.Button(row, text="✔", font=("Segoe UI", 12, "bold"),
                   command=self.on_do_it).pack(side="left", padx=(8, 0))
 
-        tk.Label(right, text="Misal:  word kholo  •  youtube kholo  •  desktop kholo  •  open spotify  •  cats search karo  •  likho mera naam Ahmad hai  •  time batao",
-                 font=("Segoe UI", 9), fg="#8f9ac9", bg=BG).pack(pady=(4, 0), anchor="w")
+        self.examples_label = tk.Label(
+            right, text=_r0["examples_line"], font=("Segoe UI", 9),
+            fg="#8f9ac9", bg=PANEL_BG)
+        self.examples_label.pack(pady=(4, 0), padx=8, anchor="w")
 
-        # Conversation log (fills the rest of the right side)
-        self.log_box = scrolledtext.ScrolledText(
-            right, font=("Consolas", 10), state="disabled",
-            bg="#0e1430", fg="#eef1ff", insertbackground="#eef1ff")
-        self.log_box.pack(pady=(6, 0), fill="both", expand=True)
+        # ---- v6 TWO-SIDED conversation: left = you said, right =
+        # what Nexora did. Two read-only panes, each autoscrolling.
+        panes = tk.Frame(right, bg=PANEL_BG)
+        panes.pack(fill="both", expand=True, padx=8, pady=(6, 8))
+        panes.columnconfigure(0, weight=1)
+        panes.columnconfigure(1, weight=1)
+        panes.rowconfigure(1, weight=1)
+
+        self.user_header = tk.Label(
+            panes, text=_r0["you_said"], font=("Segoe UI", 10, "bold"),
+            fg="#9fd0ff", bg=PANEL_BG, anchor="w")
+        self.user_header.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+        self.nexora_header = tk.Label(
+            panes, text=_r0["nexora_did"], font=("Segoe UI", 10, "bold"),
+            fg="#7dffb0", bg=PANEL_BG, anchor="w")
+        self.nexora_header.grid(row=0, column=1, sticky="ew", padx=(4, 0))
+
+        self.user_text = self._make_pane(panes)
+        self.user_text.grid(row=1, column=0, sticky="nsew", padx=(0, 4))
+        self.nexora_text = self._make_pane(panes)
+        self.nexora_text.grid(row=1, column=1, sticky="nsew", padx=(4, 0))
 
         self._lang_menu = None
 
-        # ============ startup teaching lines ============
-        self.log("👋 Welcome to Nexora v5! Ye aap ki Nexora HOME screen hai - you speak, Nexora does the work.")
-        self.log("🎤 ALWAYS-LISTEN: Voice wala gola (circle) button EK dafa dabayein - Nexora lagatar sunta rahega, har command ke liye dobara click nahi karna. Band karne ke liye wohi button dobara dabayein.")
-        self.log("🌐 Language: Nexora hamesha English se shuru hota hai. Zuban badalne ke liye Language wala gola button dabayein aur list se apni zuban chunein.")
+        # ============ startup teaching lines (English - the start
+        # language; the screen re-labels itself if the user picks
+        # another language) ============
+        self.log("👋 Welcome to Nexora v6! This is your Nexora HOME screen - you speak, Nexora does the work.")
+        self.log("🎤 ALWAYS-LISTEN: tap the Voice circle button ONE time - Nexora keeps listening, no clicking again for every command. Tap it again to stop; it never switches off by itself.")
+        self.log("🗂 The two boxes: the LEFT box shows what YOU said, the RIGHT box shows what NEXORA did.")
+        self.log("🌐 Language: Nexora always starts in English. To change it, tap the Language circle button and pick your language - the whole screen changes to it.")
         self.log("🌐 Voice works online — internet must be ON.")
-        self.log("No mic? Type the command on the right and press 'Do It'. Need help any time? Tap the ❓ Help circle button.")
-        self.log(f"🌍 {len(LANGUAGES)} zubanon mein sun sakta hai. Jawab usi zuban mein milega (21 bari zubanon ke jawab unhi ki zuban mein, baqi ke liye English).")
+        self.log("Short commands are enough: 'desktop', 'documents', 'music', 'open C drive'. Small hearing mistakes are repaired too.")
+        self.log("No mic? Type the command on the right and press ✔. Need help any time? Tap the ❓ Help circle button.")
+        self.log(f"🌍 Nexora can listen in {len(LANGUAGES)} languages and replies in the same language (full replies in 21 languages, English for the rest).")
         if sr is None:
-            self.log("Note: 'SpeechRecognition' library nahi mili - awaaz sunna band hai, lekin typed commands chalengi. run_nexora.bat se chalane par libraries khud install ho jati hain.")
+            self.log("Note: the 'SpeechRecognition' library was not found - voice listening is off, but typed commands work. Start Nexora with run_nexora.bat and the libraries install themselves.")
         if pyttsx3 is None:
-            self.log("Note: 'pyttsx3' library nahi mili - Nexora bol kar jawab nahi dega, jawab sirf screen par ayega.")
+            self.log("Note: the 'pyttsx3' library was not found - Nexora will not speak back, replies will only appear on screen.")
         # Floating Nexora icon (built last, fully guarded)
         self._build_floating()
         if self.float_win is not None:
@@ -832,7 +941,9 @@ class NexoraApp:
                 btn["canvas"].itemconfigure(btn["label"], text=short[:12])
         except Exception:
             pass
-        self.log(f"🌐 Language: {display} - Nexora ab isi zuban mein sunega aur jawab dega.")
+        # v6: the whole screen re-labels itself in the new language
+        self._refresh_localized_labels()
+        self.log(f"🌐 Language: {display}")
 
     def _on_language_circle(self, anchor_widget=None):
         try:
@@ -852,23 +963,74 @@ class NexoraApp:
         except Exception:
             pass
 
-    # ----- circular buttons (left column) -----
+    # ----- localised UI text helpers -----
+    def ui(self):
+        """The current locale's full string set (replies + GUI keys)."""
+        return replies_for(self.language_code())
+
+    @staticmethod
+    def _type_label_text(replies):
+        """
+        The label next to the type box, derived from the locale's own
+        "typing" template ("Typing: {text}" -> "⌨ Typing:") so it is
+        genuinely in the selected language.
+        """
+        try:
+            word = (replies.get("typing", "Typing: {text}")
+                    .replace("{text}", "").rstrip(" :\uff1a").strip())
+        except Exception:
+            word = ""
+        return "⌨ " + (word or "Type") + ":"
+
+    def _refresh_localized_labels(self):
+        """Re-label the visible static texts in the current language."""
+        r = self.ui()
+        try:
+            self.subtitle_label.configure(text=r["subtitle"])
+            self.user_header.configure(text=r["you_said"])
+            self.nexora_header.configure(text=r["nexora_did"])
+            self.examples_label.configure(text=r["examples_line"])
+            self.type_label.configure(text=self._type_label_text(r))
+            if self.speak_check is not None:
+                self.speak_check.configure(text=r["speak_back_label"])
+            if not self.always_listening:
+                self.status_var.set(r["ready_status"])
+        except Exception:
+            pass
+
+    # ----- read-only conversation pane -----
+    def _make_pane(self, parent):
+        """One pane of the two-sided conversation (text + scrollbar)."""
+        frame = tk.Frame(parent, bg=PANEL_BG)
+        text = tk.Text(frame, font=("Segoe UI", 10), state="disabled",
+                       wrap="word", bg=TEXT_BG, fg="#eef1ff",
+                       insertbackground="#eef1ff", relief="flat",
+                       padx=6, pady=6)
+        text.pack(side="left", fill="both", expand=True)
+        scroll = tk.Scrollbar(frame, command=text.yview)
+        scroll.pack(side="right", fill="y")
+        text.configure(yscrollcommand=scroll.set)
+        frame.text_widget = text
+        return frame
+
+    # ----- circular buttons (left panel, compact 2x2 grid in v6) --
     def _make_circle(self, parent, glyph, label, command):
         """
-        A circular button drawn on a Canvas: outer glow ring, filled
-        circle, a big emoji glyph in the middle and a tiny label under
-        it. Returns a dict with the canvas + item ids (the Voice
-        button's ring/label are updated by _refresh_listen_ui).
+        A circular button drawn on a Canvas (~86px circle): outer
+        glow ring, filled circle, a big emoji glyph in the middle
+        and a tiny label under it. Returns a dict with the canvas +
+        item ids (the Voice button's ring/label are updated by
+        _refresh_listen_ui).
         """
-        cv = tk.Canvas(parent, width=118, height=134, bg=BG,
+        cv = tk.Canvas(parent, width=100, height=116, bg=PANEL_BG,
                        highlightthickness=0, cursor="hand2")
-        glow = cv.create_oval(8, 4, 110, 106, outline="#22335f", width=6)
-        ring = cv.create_oval(13, 9, 105, 101, fill="#16224a",
+        glow = cv.create_oval(4, 2, 96, 92, outline="#22335f", width=5)
+        ring = cv.create_oval(8, 6, 92, 90, fill="#16224a",
                               outline=RING_OFF, width=3)
-        glyph_id = cv.create_text(59, 55, text=glyph,
-                                  font=("Segoe UI Emoji", 25), fill="#ffffff")
-        label_id = cv.create_text(59, 122, text=label,
-                                  font=("Segoe UI", 9, "bold"), fill="#c6cdf5")
+        glyph_id = cv.create_text(50, 48, text=glyph,
+                                  font=("Segoe UI Emoji", 22), fill="#ffffff")
+        label_id = cv.create_text(50, 104, text=label,
+                                  font=("Segoe UI", 8, "bold"), fill="#c6cdf5")
         cv.bind("<Button-1>", lambda _e: command())
         return {"canvas": cv, "glow": glow, "ring": ring,
                 "glyph": glyph_id, "label": label_id}
@@ -884,7 +1046,7 @@ class NexoraApp:
             box.pack(padx=12, pady=12, fill="both", expand=True)
             box.insert("end", HELP_TEXT)
             box.configure(state="disabled")
-            tk.Button(win, text="Close / Band Karein", font=("Segoe UI", 11, "bold"),
+            tk.Button(win, text="Close", font=("Segoe UI", 11, "bold"),
                       command=win.destroy).pack(pady=(0, 12))
         except Exception:
             # If the popup cannot open, teach in the log instead.
@@ -1091,22 +1253,50 @@ class NexoraApp:
         except Exception:
             pass
 
-    # ----- basics -----
-    def log(self, text):
-        self.log_box.configure(state="normal")
-        self.log_box.insert("end", text + "\n")
-        self.log_box.see("end")
-        self.log_box.configure(state="disabled")
+    # ----- basics: v6 two-sided logging -----
+    @staticmethod
+    def _pane_append(text_widget, text):
+        text_widget.configure(state="normal")
+        text_widget.insert("end", text + "\n")
+        text_widget.see("end")
+        text_widget.configure(state="disabled")
 
-    def log_text(self):
-        """Whole log content (used by diagnostics/smoke tests)."""
+    def log_user(self, text):
+        """What the USER said/typed -> LEFT pane only."""
         try:
-            return self.log_box.get("1.0", "end")
+            self._pane_append(self.user_text.text_widget, text)
+        except Exception:
+            pass
+
+    def log_nexora(self, text):
+        """What NEXORA did / replied / reports -> RIGHT pane only."""
+        try:
+            self._pane_append(self.nexora_text.text_widget, text)
+        except Exception:
+            pass
+
+    def log(self, text):
+        """Nexora-side message (startup notes, status, results)."""
+        self.log_nexora(text)
+
+    def user_log_text(self):
+        try:
+            return self.user_text.text_widget.get("1.0", "end")
         except Exception:
             return ""
 
+    def nexora_log_text(self):
+        try:
+            return self.nexora_text.text_widget.get("1.0", "end")
+        except Exception:
+            return ""
+
+    def log_text(self):
+        """Both panes combined (diagnostics/smoke tests)."""
+        return self.user_log_text() + "\n" + self.nexora_log_text()
+
     def set_status(self, text):
-        self.status_var.set("Status: " + text)
+        self.status_var.set(text)
 
     def speak(self, text):
         if not self.speak_var.get() or pyttsx3 is None:
@@ -1138,8 +1328,11 @@ class NexoraApp:
         threading.Thread(target=_talk, daemon=True).start()
 
     def answer(self, message):
-        self.log("Nexora: " + message)
-        self.set_status("Tayyar hai (Ready)")
+        self.log_nexora(message)
+        if self.always_listening:
+            self.set_status(self.ui()["listening_on"])
+        else:
+            self.set_status(self.ui()["ready_status"])
         self.speak(message)
 
     # ----- command handling -----
@@ -1147,21 +1340,20 @@ class NexoraApp:
         sentence = (sentence or "").strip()
         if not sentence:
             return
-        self.log("Aap ne kaha: " + sentence)
-        self.set_status("Kaam kar raha hai... (Working)")
+        self.log_user(sentence)   # v6: user's words -> LEFT pane only
         result = parse_any(sentence)
         if continuous and result.get("action") == "unknown":
-            # Always-listen mode: unknown phrases are logged quietly -
-            # NO spoken "did not understand" (that would spam the user
-            # with TTS for every bit of background talk).
-            self.log("Nexora: (ye baat command nahi lagi - kuch nahi kiya)")
-            self.set_status("Sun raha hai... (Listening ON)")
+            # Always-listen mode: unknown phrases are noted quietly in
+            # the Nexora pane - NO spoken "did not understand" (that
+            # would spam the user with TTS for background talk).
+            self.log_nexora(self.ui()["not_understood"])
+            self.set_status(self.ui()["listening_on"])
             return
         message = self.runner.run(result)
         if message:  # dictation/close schedule their own final message
             self.answer(message)
         if self.always_listening:
-            self.set_status("Sun raha hai... (Listening ON)")
+            self.set_status(self.ui()["listening_on"])
 
     def on_do_it(self):
         sentence = self.entry.get()
@@ -1182,9 +1374,9 @@ class NexoraApp:
         except Exception:
             copied = False
         if not copied:
-            self.log("Dictation text (copy kar lein): " + text)
-            return "Text clipboard par nahi ja saka - upar log mein text de diya hai, wahan se copy kar lein."
-        self.log(f"Dictation tayyar hai: \"{text}\" - 3 second mein paste hoga. Jaldi se Word/Notepad ki window par click karein!")
+            self.log("Dictation text (copy it from here): " + text)
+            return "The text could not be copied to the clipboard - I put it in the log above, please copy it from there."
+        self.log(f"Dictation ready: \"{text}\" - it will paste in 3 seconds. Quickly click on the Word/Notepad window!")
         self.root.after(3000, lambda: self._do_paste(text))
         return ""  # final message comes from _do_paste
 
@@ -1195,12 +1387,12 @@ class NexoraApp:
                 pyautogui.hotkey("ctrl", "v")
                 self.answer(typing_reply)
             else:
-                self.answer(typing_reply + " (Text clipboard par hai - apni window mein Ctrl+V dabayein.)")
+                self.answer(typing_reply + " (The text is on the clipboard - press Ctrl+V in your window.)")
         except Exception:
-            self.answer("Paste nahi ho saka - Ctrl+V khud dabayein, text clipboard par hai.")
+            self.answer("Paste failed - press Ctrl+V yourself, the text is on the clipboard.")
 
     def schedule_close_window(self):
-        self.log("2 second mein samne wali window band hogi...")
+        self.log("The window in front will close in 2 seconds...")
         self.root.after(2000, self._do_close)
         return ""
 
@@ -1208,11 +1400,11 @@ class NexoraApp:
         try:
             if pyautogui is not None:
                 pyautogui.hotkey("alt", "f4")
-                self.answer("Window band kar di.")
+                self.answer("Window closed.")
             else:
-                self.answer("Band karna mumkin nahi (pyautogui missing hai) - khud Alt+F4 dabayein.")
+                self.answer("Closing is not possible (pyautogui is missing) - press Alt+F4 yourself.")
         except Exception:
-            self.answer("Window band nahi ho saki.")
+            self.answer("The window could not be closed.")
 
     # ----- always-listen (v5): tap 🎤 once, Nexora keeps listening -----
     def toggle_listening(self):
@@ -1224,14 +1416,15 @@ class NexoraApp:
 
     def _start_listening(self):
         if sr is None:
-            self.answer("Awaaz sunne wali library (SpeechRecognition) nahi mili. Pehle run_nexora.bat se program chalayein - libraries khud install ho jayengi. Filhal right side par command likh kar test karein.")
+            self.answer("The voice library (SpeechRecognition) was not found. Start Nexora with run_nexora.bat - the libraries install themselves. For now, type a command on the right and press the tick button.")
             return
         self.always_listening = True
         self._listen_stop.clear()
         self._listen_error_logged = False
         self._refresh_listen_ui()
-        self.set_status("Sun raha hai... (Listening ON)")
-        self.log("🎤 Always-listen ON: Nexora ab lagatar sun raha hai - har command ke liye dobara click NAHI karna. Band karne ke liye 🎤 Voice wala gola button dobara dabayein.")
+        r = self.ui()
+        self.set_status(r["listening_on"])
+        self.log("🎤 " + r["listening_on"] + " Always-listen is ON - no clicking again for every command. Tap the 🎤 Voice circle button again to stop.")
         self._listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
         self._listen_thread.start()
 
@@ -1239,8 +1432,9 @@ class NexoraApp:
         self.always_listening = False
         self._listen_stop.set()
         self._refresh_listen_ui()
-        self.set_status("Tayyar hai (Ready)")
-        self.log("🎤 Always-listen OFF: Nexora ab nahi sun raha. Dobara shuru karne ke liye 🎤 Voice wala gola button dabayein.")
+        r = self.ui()
+        self.set_status(r["ready_status"])
+        self.log("🎤 " + r["listening_off"] + " Tap the 🎤 Voice circle button to start listening again.")
 
     def _refresh_listen_ui(self):
         """Voice circle ring/label + floating ring/dot mirror the state."""
@@ -1288,28 +1482,63 @@ class NexoraApp:
         again, unknown speech is ignored quietly, and mic/internet
         errors are logged once per streak while the loop keeps trying.
         All GUI updates are scheduled with root.after().
+
+        v6 mic robustness: the recognizer re-calibrates for the
+        room's ambient noise (0.6s) when the loop starts, and again
+        after every 15 failed cycles, so a noisy room or a moved mic
+        does not silently break recognition.
         """
         recognizer = None
+        fail_cycles = 0
+        need_calibration = True   # calibrate once at loop start
+        mic_error = None          # localised line, fetched lazily
+
+        def problem_line():
+            nonlocal mic_error
+            if mic_error is None:
+                try:
+                    mic_error = replies_for(self.language_code())["mic_error"]
+                except Exception:
+                    mic_error = ("The microphone could not be heard - "
+                                 "please check the mic and your internet.")
+            return mic_error
+
+        def note_failure():
+            nonlocal fail_cycles, need_calibration
+            fail_cycles += 1
+            if fail_cycles >= 15:
+                fail_cycles = 0
+                need_calibration = True   # re-calibrate next cycle
+
         while not self._listen_stop.is_set():
             if recognizer is None:
                 try:
                     recognizer = sr.Recognizer()
                 except Exception:
-                    self._listen_problem("Mic library ka masla hai - Nexora sunne ki koshish jaari rakhega.")
+                    self._listen_problem(problem_line())
+                    note_failure()
                     self._listen_stop.wait(2.0)
                     continue
             try:
                 with sr.Microphone() as source:
                     try:
-                        recognizer.adjust_for_ambient_noise(source, duration=0.3)
+                        if need_calibration:
+                            recognizer.adjust_for_ambient_noise(
+                                source, duration=0.6)
+                            need_calibration = False
+                        else:
+                            recognizer.adjust_for_ambient_noise(
+                                source, duration=0.3)
                     except Exception:
                         pass
                     audio = recognizer.listen(source, timeout=5,
                                               phrase_time_limit=7)
             except Exception as exc:
                 if type(exc).__name__ == "WaitTimeoutError":
+                    note_failure()
                     continue  # silence - just listen again, no log spam
-                self._listen_problem("Mic se sunna mumkin nahi hua - mic check karein. Nexora koshish jaari rakhega.")
+                self._listen_problem(problem_line())
+                note_failure()
                 self._listen_stop.wait(1.0)
                 continue
             try:
@@ -1318,14 +1547,14 @@ class NexoraApp:
             except Exception as exc:
                 name = type(exc).__name__
                 if name == "UnknownValueError":
+                    note_failure()
                     continue  # heard something unclear - stay quiet
-                if name == "RequestError":
-                    self._listen_problem("Voice ke liye internet chahiye - connection check karein. Nexora koshish jaari rakhega.")
-                else:
-                    self._listen_problem("Sunne mein masla aaya - Nexora koshish jaari rakhega.")
+                self._listen_problem(problem_line())
+                note_failure()
                 self._listen_stop.wait(1.0)
                 continue
             self._listen_error_logged = False
+            fail_cycles = 0
             if heard and heard.strip():
                 try:
                     self.root.after(
@@ -1355,7 +1584,7 @@ class NexoraApp:
 
 def main():
     if tk is None:
-        print("Nexora: Tkinter nahi mila. Windows par Python ke sath Tkinter khud ata hai - Python dobara install karke dekhein.")
+        print("Nexora: Tkinter was not found. On Windows, Tkinter comes with Python itself - please reinstall Python and try again.")
         return
     root = tk.Tk()
     NexoraApp(root)

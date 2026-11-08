@@ -58,8 +58,22 @@ targets, and an OPEN command for an unknown app name returns
 {"action": "generic_open", "name": ...} so the runner can look the
 app up on the laptop. Generic open ONLY fires on an anchored open
 verb - never for close/volume/time traps.
+
+NEW IN v6 (from real laptop testing - the recogniser mishears):
+* FUZZY TARGET REPAIR: a misheard target word is repaired with
+  difflib ("destop" -> desktop, "yotube" -> youtube, "pothon" ->
+  python) before the rules run. Only target vocabulary is repaired,
+  never verbs, and a protected set of ordinary/parser words ("mera",
+  "home", "door", "games", ...) is never rewritten.
+* DRIVE LETTERS: "open c drive", "c disk kholo" ->
+  {"action": "open_drive", "drive": "C"}.
+* GO-TO / POSSESSIVE / BARE forms: "go to X", "take me to X",
+  "X mein jao", "my photos folder", bare "documents" / "music".
+* PLAY / CHALAO: "play X on youtube", "youtube par X chalao",
+  "X chalao" (X not a known target) -> youtube_search for X.
 """
 
+import difflib
 import re
 
 # Words that mean "open" in English / Roman Urdu
@@ -103,6 +117,10 @@ BARE_TARGETS = {
     "videos": "open_videos",
     "download": "open_downloads",
     "downloads": "open_downloads",
+    # v6: documents and music folders are bare targets too
+    "document": "open_documents",
+    "documents": "open_documents",
+    "music": "open_music",
     # v5: the laptop itself
     "desktop": "open_desktop",
     "my computer": "open_this_pc",
@@ -301,28 +319,13 @@ def _is_date_query(core_words, core):
     )
 
 
-def _open_target(words, normalized):
+def _target_action(word_set):
     """
-    Return the open action for a sentence, or None.
-    Fires only for an anchored open verb or an exact bare target name.
+    Map a set of (fuzzy-repaired) words to a built-in open action.
+    Specific targets win over the generic folder words, so
+    "open my photos folder" is Pictures, not File Explorer -
+    explorer/files/folder is checked LAST.
     """
-    word_set = set(words)
-
-    # Exact bare target: the sentence is ONLY the name of the thing.
-    if normalized in BARE_TARGETS:
-        return BARE_TARGETS[normalized]
-
-    # Open verb anchored at the start ("open youtube", "please open word")
-    # or at the end ("word kholo", "youtube kholo").
-    core_words = _core(normalized).split()
-    anchored_verb = (
-        (core_words and core_words[0] in OPEN_WORDS)
-        or (core_words and core_words[-1] in OPEN_WORDS)
-        or (len(core_words) > 1 and core_words[-2] in OPEN_WORDS)
-    )
-    if not anchored_verb:
-        return None
-
     if "youtube" in word_set:
         return "open_youtube"
     if "chrome" in word_set:
@@ -337,22 +340,93 @@ def _open_target(words, normalized):
         return "open_calculator"
     if "paint" in word_set:
         return "open_paint"
-    if (
-        "explorer" in word_set or "files" in word_set or "folder" in word_set
-        or "file" in word_set
-    ):
-        return "open_explorer"
-    if word_set & {"photo", "photos", "picture", "pictures", "tasveer", "tasaveer"}:
+    if word_set & {"photo", "photos", "picture", "pictures", "fotos", "tasveer", "tasaveer"}:
         return "open_pictures"
     if word_set & {"video", "videos"}:
         return "open_videos"
     if word_set & {"download", "downloads"}:
         return "open_downloads"
+    if word_set & {"document", "documents"}:
+        return "open_documents"
+    if "music" in word_set:
+        return "open_music"
     # v5: the laptop itself
     if "desktop" in word_set:
         return "open_desktop"
     if "computer" in word_set or "pc" in word_set:
         return "open_this_pc"
+    if word_set & {"explorer", "files", "file", "folder", "folders"}:
+        return "open_explorer"
+    return None
+
+
+# Possessive words dropped when a bare phrase is resolved (v6):
+# "my photos folder", "mera photos folder" -> "photos".
+_POSSESSIVES = {"my", "mera", "meri", "mere"}
+
+
+def _clean_bare_phrase(normalized):
+    """Drop possessives and a trailing 'folder' from a short phrase."""
+    words = [w for w in normalized.split() if w not in _POSSESSIVES]
+    if words and words[-1] == "folder":
+        words.pop()
+    return " ".join(words)
+
+
+def _single_word_target(word):
+    """
+    A lone known word ("python", "spotify") -> its built-in action,
+    or a generic_open dict for app-name vocabulary (python, whatsapp,
+    spotify, settings, camera - the runner looks them up).
+    """
+    if word not in _FUZZY_VOCAB:
+        return None
+    action = _FUZZY_VOCAB[word]
+    if action:
+        return action
+    return {"action": "generic_open", "name": word}
+
+
+def _open_target(words, normalized):
+    """
+    Return the open action for a sentence, or None.
+    Fires only for an anchored open verb or an exact bare target name.
+    """
+    word_set = set(words)
+
+    # Exact bare target: the sentence is ONLY the name of the thing.
+    if normalized in BARE_TARGETS:
+        return BARE_TARGETS[normalized]
+
+    # v6: possessive / "folder" cleanup - "my photos folder",
+    # "mera photos folder", "photos folder" open that folder.
+    cleaned = _clean_bare_phrase(normalized)
+    probe = cleaned if cleaned else normalized
+    if cleaned != normalized and cleaned in BARE_TARGETS:
+        return BARE_TARGETS[cleaned]
+
+    # v6: a single known word alone ("python", "destop" - already
+    # fuzzy-repaired to "desktop") opens it.
+    probe_words = probe.split()
+    if len(probe_words) == 1:
+        single = _single_word_target(probe_words[0])
+        if single:
+            return single
+
+    # Open verb anchored at the start ("open youtube", "please open word")
+    # or at the end ("word kholo", "youtube kholo").
+    core_words = _core(normalized).split()
+    anchored_verb = (
+        (core_words and core_words[0] in OPEN_WORDS)
+        or (core_words and core_words[-1] in OPEN_WORDS)
+        or (len(core_words) > 1 and core_words[-2] in OPEN_WORDS)
+    )
+    if not anchored_verb:
+        return None
+
+    action = _target_action(word_set)
+    if action:
+        return action
     # v5: generic open - an anchored open verb + an app name Nexora
     # does not have a built-in target for ("open spotify"). Returns a
     # full result dict; the runner looks the app up on the laptop and
@@ -365,8 +439,8 @@ def _open_target(words, normalized):
 
 # Words dropped when extracting a generic app name from an open command
 _GENERIC_FILLERS = {
-    "my", "the", "a", "an", "app", "application", "program",
-    "on", "laptop", "please",
+    "my", "mera", "meri", "mere", "the", "a", "an", "app", "application",
+    "program", "on", "laptop", "please",
 }
 
 
@@ -390,6 +464,178 @@ def _generic_open_name(core_words):
     return " ".join(words)
 
 
+# ---------------------------------------------------------------------------
+# v6: fuzzy repair of misheard TARGET words.
+#
+# The recogniser mishears ("open my destop" for "open my desktop").
+# Before the rules run, each word that is NOT already a known word is
+# compared against the known-target vocabulary with
+# difflib.get_close_matches(word, vocab, n=1, cutoff=0.78) and swapped
+# for the canonical spelling. Canonical word -> built-in action, or
+# None for app names (python / whatsapp / spotify / settings / camera)
+# which go through generic_open so the runner can look them up.
+# ---------------------------------------------------------------------------
+_FUZZY_VOCAB = {
+    "desktop": "open_desktop",
+    "downloads": "open_downloads",
+    "download": "open_downloads",
+    "documents": "open_documents",
+    "document": "open_documents",
+    "pictures": "open_pictures",
+    "picture": "open_pictures",
+    "photos": "open_pictures",
+    "photo": "open_pictures",
+    "fotos": "open_pictures",
+    "videos": "open_videos",
+    "video": "open_videos",
+    "music": "open_music",
+    "youtube": "open_youtube",
+    "google": "open_google",
+    "chrome": "open_chrome",
+    "word": "open_word",
+    "notepad": "open_notepad",
+    "calculator": "open_calculator",
+    "calc": "open_calculator",
+    "paint": "open_paint",
+    "explorer": "open_explorer",
+    "python": None,      # app names -> generic_open
+    "whatsapp": None,
+    "spotify": None,
+    "settings": None,
+    "camera": None,
+}
+_FUZZY_WORDS = sorted(_FUZZY_VOCAB)
+
+# Words that must NEVER be fuzzy-rewritten: every keyword/filler the
+# parser itself uses (so "mera" can never become "camera" and "home"
+# can never become "chrome"), plus ordinary sentence words from the
+# accuracy traps and everyday commands.
+_NEVER_FUZZY = set()
+for _set in (OPEN_WORDS, SEARCH_WORDS, FILLER_WORDS,
+             _LEADING_WORD_FILLERS, _LEADING_FILLERS, _GENERIC_FILLERS):
+    _NEVER_FUZZY.update(_set)
+for _target_name in BARE_TARGETS:
+    _NEVER_FUZZY.update(_target_name.split())
+_NEVER_FUZZY.update({
+    "my", "mera", "meri", "mere",
+    "home", "page", "door", "games", "game", "book", "story", "stories",
+    "friend", "friends", "movie", "movies", "travel", "lights", "light",
+    "house", "window", "windows", "curtains", "zones", "zone", "sounds",
+    "sound", "funny", "secret", "birth", "lock", "leave", "folder",
+    "folders", "drive", "disk", "play", "jao", "mein", "naam", "note",
+    "cricket", "score", "news", "weather", "today", "pakistan",
+    "nasheed", "bananas", "banana", "yellow", "fruit", "waqt", "baje",
+    "bajay", "tarikh", "tareekh", "batao", "tez", "kam", "halki",
+    "band", "awaz", "awaaz", "khamosh", "what", "when", "tell", "date",
+    "time", "volume", "mute", "close", "this", "that", "very", "high",
+    "cats", "dogs",
+})
+
+
+def _fuzzy_word(word):
+    """Repair ONE misheard target word; leave known/other words alone."""
+    if word in _FUZZY_VOCAB or word in _NEVER_FUZZY or len(word) < 4:
+        return word
+    match = difflib.get_close_matches(word, _FUZZY_WORDS, n=1, cutoff=0.78)
+    return match[0] if match else word
+
+
+def _fuzzy_resolve(normalized):
+    """Apply _fuzzy_word to every word of the normalised sentence."""
+    return " ".join(_fuzzy_word(w) for w in normalized.split())
+
+
+# ---------------------------------------------------------------------------
+# v6: drive letters - "open c drive", "open c disk", "c drive kholo",
+# bare "d disk" -> {"action": "open_drive", "drive": "D"}
+# ---------------------------------------------------------------------------
+_DRIVE_RE = re.compile(
+    r"^(?:(?:open|start|launch)\s+)?([a-z])\s+(drive|disk)"
+    r"(?:\s+(?:kholo|khol do|open))?$"
+)
+
+
+def _drive_action(core):
+    match = _DRIVE_RE.match(core)
+    if match:
+        return {"action": "open_drive", "drive": match.group(1).upper()}
+    return None
+
+
+# ---------------------------------------------------------------------------
+# v6: play / chalao - playing media means YouTube:
+# "play X on youtube", "play X", "youtube par X chalao", "X chalao".
+# Conservative: a KNOWN target is left to the open rules
+# ("youtube chalao" opens YouTube, "word chalao" opens Word).
+# ---------------------------------------------------------------------------
+_PLAY_FILLERS = {
+    "play", "on", "par", "per", "the", "for", "a", "an",
+    "youtube", "chalao", "chalo",
+}
+
+
+def _play_intent(words):
+    word_set = set(words)
+    verb = None
+    if "play" in word_set:
+        verb = "play"
+    elif word_set & {"chalao", "chalo"}:
+        verb = "chalao"
+    if not verb:
+        return None
+    rest = [w for w in words
+            if w not in _PLAY_FILLERS and w not in _GENERIC_FILLERS]
+    while rest and rest[0] in ("and", "the"):
+        rest.pop(0)
+    if "youtube" in word_set:
+        if rest:
+            return {"action": "youtube_search", "query": " ".join(rest)}
+        if verb == "play":
+            return {"action": "open_youtube"}
+        return None  # "youtube chalao" -> open rules open YouTube
+    if _target_action(word_set):
+        return None  # known target -> open rules ("word chalao")
+    if rest:
+        return {"action": "youtube_search", "query": " ".join(rest)}
+    return None
+
+
+# ---------------------------------------------------------------------------
+# v6: go-to forms act as open: "go to X", "take me to X",
+# "X mein jao", "X par jao".
+# ---------------------------------------------------------------------------
+def _goto_action(normalized):
+    phrase = None
+    if normalized.startswith("go to "):
+        phrase = normalized[len("go to "):]
+    elif normalized.startswith("take me to "):
+        phrase = normalized[len("take me to "):]
+    else:
+        for suffix in (" mein jao", " par jao", " me jao"):
+            if normalized.endswith(suffix):
+                phrase = normalized[:-len(suffix)]
+                break
+    if not phrase:
+        return None
+    phrase = _clean_bare_phrase(phrase).strip()
+    if not phrase:
+        return None
+    if phrase in BARE_TARGETS:
+        return {"action": BARE_TARGETS[phrase]}
+    phrase_words = phrase.split()
+    action = _target_action(set(phrase_words))
+    if action:
+        return {"action": action}
+    if len(phrase_words) == 1:
+        single = _single_word_target(phrase_words[0])
+        if single:
+            return single if isinstance(single, dict) else {"action": single}
+    name = _generic_open_name(phrase_words)
+    if name:
+        return {"action": "generic_open", "name": name}
+    return None
+
+
 def parse_command(text):
     """Return an action dict for a spoken/typed sentence."""
     original = "" if text is None else str(text).strip()
@@ -411,6 +657,15 @@ def parse_command(text):
         "hello nexora", "hi nexora", "salam nexora",
     ) or (words[0] in ("hello", "salam") and len(words) <= 3):
         return {"action": "greet"}
+
+    # ---- 2b. Fuzzy repair of misheard target words (v6) ----
+    # "open my destop" -> "open my desktop". Only target vocabulary is
+    # repaired (never verbs / protected words), and dictation above
+    # already used the original sentence, so typed text is untouched.
+    resolved = _fuzzy_resolve(normalized)
+    if resolved != normalized:
+        normalized = resolved
+        words = normalized.split()
 
     # ---- 3. Explicit search - ALWAYS wins over open/volume/close/time ----
     where = _search_intent(words, normalized)
@@ -444,12 +699,27 @@ def parse_command(text):
     if _is_date_query(core_words, core):
         return {"action": "tell_date"}
 
-    # ---- 7. Open commands (anchored verb or exact bare target) ----
+    # ---- 7. Drive letters (v6): "open c drive", "c disk kholo" ----
+    drive = _drive_action(core)
+    if drive:
+        return drive
+
+    # ---- 8. Play / chalao (v6): "play X on youtube", "X chalao" ----
+    play = _play_intent(words)
+    if play:
+        return play
+
+    # ---- 9. Go-to forms (v6): "go to X", "take me to X", "X mein jao" ----
+    goto = _goto_action(normalized)
+    if goto:
+        return goto
+
+    # ---- 10. Open commands (anchored verb or exact bare target) ----
     opened = _open_target(words, normalized)
     if opened:
         if isinstance(opened, dict):  # generic_open carries the name
             return opened
         return {"action": opened}
 
-    # ---- 8. Unknown - do nothing rather than the wrong thing ----
+    # ---- 11. Unknown - do nothing rather than the wrong thing ----
     return {"action": "unknown", "text": original}
